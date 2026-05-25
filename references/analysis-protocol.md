@@ -387,6 +387,27 @@ For non-trivial repos, **dispatch each top-level (round-2) module to a dedicated
 
 For smaller repos, do everything in one session.
 
+### Deferred items pattern
+
+When the orchestrator needs to note an item that requires deeper subagent analysis but cannot wait for that analysis to finish — e.g., inventory rows whose evidence will come from the subagent's deep-dive — use this pattern:
+
+1. Mark the item in-place with `(TBD: deep-dive on M####-<slug>)` — include the module ID the subagent is responsible for.
+2. Add an entry to `.architecture/.meta/progress.json` under `deferred_items` (one row per TBD):
+   ```json
+   "deferred_items": [
+     {
+       "file": "inventories/entrypoints.md",
+       "row_anchor": "runtime/<package-name>",
+       "pending_on": "M####-<slug>",
+       "added_at": "<ISO8601>"
+     }
+   ]
+   ```
+3. When the responsible subagent finishes its module doc, the orchestrator backfills the deferred item using the subagent's report and removes the row from `deferred_items`.
+4. Mapping is NOT complete until `deferred_items` is empty. The Stopping condition checks this.
+
+Without this pattern, "(TBD)" notes in published wiki files become silent technical debt — no one circles back to resolve them.
+
 ---
 
 ## Inter-module reference integrity (final pass)

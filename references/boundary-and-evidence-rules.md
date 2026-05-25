@@ -47,6 +47,19 @@ Hidden uncertainty causes cascading damage. Recorded uncertainty does not.
 
 Default to the highest level you can prove. When in doubt, downgrade — `medium` honestly held is more useful than `high` falsely held.
 
+### What `confidence` is, and is not
+
+`confidence` measures the **accuracy of the documentation** — not the **reliability of the documented system**. A module that accurately describes an honor-system-enforced behavior (e.g., a written contract that humans / agents must follow, with no automated enforcement) can legitimately be `confidence: high` as long as the documentation is faithful to the contract. The fact that the system itself is unenforceable is a **separate concern**, recorded in `## Unknowns And Risks` and aggregated to `RISKS.md`.
+
+Concrete examples:
+
+- A module doc says "this function returns `Result<T, E>` and never throws" — verified by reading the code, no tests but the type system enforces it. **`confidence: high`** (documentation matches code, type system gives enforcement).
+- A module doc says "agents must call X before Y" — quoted directly from the contract file. **`confidence: high`** for the documentation; but the **enforceability gap** (no automated check) goes into `## Unknowns And Risks` + `RISKS.md`.
+- A module doc says "this scheduler runs every 5 minutes" — inferred from a config value but not observed in a running system. **`confidence: medium`** (traced but not runtime-verified).
+- A module doc says "this is the auth checkpoint" — based on filename pattern, no symbol verification. **`confidence: low`** (inferred from structure).
+
+This distinction prevents two common errors: (a) marking everything `confidence: low` because the documented system "can be cheated", and (b) marking everything `confidence: high` because the AI is sure of what it wrote. Neither corresponds to reality.
+
 ---
 
 ## 3. Module boundaries are range-level, not file-level

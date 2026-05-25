@@ -9,6 +9,33 @@ last_verified: "{{YYYY-MM-DD}}"
 last_verified_sha: "{{git_sha}}"
 ---
 
+<!-- VARIANT GUIDE — choose the right shape for this module:
+
+  For LEAF modules (leaf: true):
+    - Code Map: full 6-column schema (Role / File / Lines / Anchor / Edit Guidance / Confidence).
+    - Public Surface: list every exported symbol with its signature shape.
+    - Leaf Certificate: complete every checkbox.
+    - State And Data Ownership, Invariants, Failure Modes: filled in detail.
+
+  For NON-LEAF modules (leaf: false):
+    - Code Map: simplified to 2 columns (Subtree | Child module ID), prefixed
+      with the one-line note: "This is a non-leaf module. See child modules
+      for line-range ownership." Children's docs hold the precise ranges.
+    - Public Surface: may omit, OR list only the "facade" exports that
+      aggregate children's surfaces. If children expose their own surfaces
+      independently, omit.
+    - Leaf Certificate: omit entirely.
+    - State And Data Ownership: may delegate to children with a 1-line
+      pointer ("Each child owns its own state — see children").
+    - Invariants and Failure Modes: state module-WIDE invariants/failures
+      here (that apply across all children), not child-specific ones.
+
+  BOTH variants ALWAYS fill: frontmatter, Summary, Architecture Role, Scope
+  (Owns / Does Not Own), Inbound Interactions, Outbound Interactions,
+  Modification Guide, Gotchas (if any), Unknowns And Risks, Evidence Log,
+  and the trailing END-OF-MODULE sentinel.
+-->
+
 # M{{####}}-{{slug}}: {{Module title}}
 
 ## Summary
@@ -33,11 +60,16 @@ last_verified_sha: "{{git_sha}}"
 
 ## Code Map
 
-Mandatory for leaves. Non-leaves may point at children instead.
+Mandatory for leaves. Non-leaves use the 2-column variant (see VARIANT GUIDE above).
+
+> **Lines column conventions**:
+> - For code files (functions, classes, methods), use a precise line range like `42-118`.
+> - For document files (`.md`, contracts, manuals, fixtures) where the whole file is the unit, set `Lines` to `full` and put a structural anchor (e.g., `## Section Header`, top-level, ABI name) in the Anchor column. Documents drift by reflow, not line shift — structural anchors survive.
+> - If the Code Map row warrants a warning note (e.g., "verify-later", "drop-named", "potential drift"), ALSO add a parallel entry to `## Unknowns And Risks` below — RISKS.md aggregation only scans `## Unknowns And Risks`, not Code Map columns.
 
 | Role | File | Lines | Anchor | Edit Guidance | Confidence |
 | --- | --- | --- | --- | --- | --- |
-| {{What this range contributes}} | `{{path}}` | {{start}}-{{end}} | `{{symbol_or_anchor}}` | {{safe / requires-careful-context / requires-self-healing-first}} | {{confidence}} |
+| {{What this range contributes}} | `{{path}}` | {{start-end or `full`}} | `{{symbol/route/test/config-key/section anchor}}` | {{safe / requires-careful-context / requires-self-healing-first}} | {{confidence}} |
 
 ## Inbound Interactions
 
