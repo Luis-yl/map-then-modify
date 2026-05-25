@@ -67,16 +67,34 @@ rg --files | awk -F/ '{print $1}' | sort | uniq -c | sort -rn  # file count per 
 
 For LOC, prefer `tokei` or `scc` if available; else `wc -l` on the file list.
 
-### 1.3 Build inventories
+### 1.3 Plan inventory categories (do not write files yet)
 
-Create one inventory file per category under `inventories/` using `templates/inventory.md`:
+Decide which of the 4 standard inventories the project needs:
 
-- **`entrypoints.md`** — `main`, `index`, `app`, server bootstrap, CLI definitions, contract `constructor`s, scheduled job registration.
-- **`tests.md`** — test framework(s), test directories, test commands from CI/Makefile.
-- **`external-interfaces.md`** — HTTP routes, gRPC services, RPC methods, CLI subcommands, contract ABI methods, event signatures, exported library symbols.
-- **`generated-and-vendor.md`** — generated code paths + generator command/source; vendored dirs + the upstream they vendor.
+- **`entrypoints`** — `main`, `index`, `app`, server bootstrap, CLI definitions, contract `constructor`s, scheduled job registration.
+- **`tests`** — test framework(s), test directories, test commands from CI/Makefile.
+- **`external-interfaces`** — HTTP routes, gRPC services, RPC methods, CLI subcommands, contract ABI methods, event signatures, exported library symbols.
+- **`generated-and-vendor`** — generated code paths + generator command/source; vendored dirs + the upstream they vendor.
 
-### 1.4 Evidence required for everything
+All 4 are recommended for any non-trivial codebase. **The files themselves are not yet written** — they are written in Phase 2.5, after the MANIFEST tree assigns stable module IDs. Inventory rows must cite module IDs (`M####-<slug>`) in their `Related module(s)` column, and forcing those IDs to exist before the inventory is written is what makes Phase 2.5 the right home.
+
+### 1.4 Initialize `RISKS.md` early (and append throughout)
+
+`RISKS.md` is **the canonical event log of project-level risk** discovered during analysis. Initialize it now from Phase 0/1 preflight findings — every later phase appends to it.
+
+Initialize with rows for any of these surfaced during Phase 0/1 census:
+
+- Source-tree anomalies (sync conflict files, orphaned files, files with mismatched extensions).
+- Stale top-level documentation (README / CLAUDE.md / AGENTS.md / project guide drift vs actual tree).
+- Placeholder build steps (e.g., a `lint` script that just echoes; a `test` script that always passes).
+- Generated artifacts whose generator is not yet identified.
+- License-isolated subtrees (vendored or upstream snapshots with explicit license boundary).
+- Known-fragile external systems the project depends on without a fallback.
+- Active investigation / refactor threads recorded in project memory or RFC docs (these signal upcoming churn).
+
+After Phase 1, `RISKS.md` is the single source of truth for risk. Per-module docs may reference these risks by ID (`R####`); the master copy lives here.
+
+### 1.5 Evidence required for everything
 
 A directory name alone is **not** evidence. Acceptable evidence:
 - Import graphs (resolved via static parse or `rg` on import statements)
@@ -94,9 +112,9 @@ If a claim has no evidence, mark it `confidence: low` or `unknown` and either ch
 
 ---
 
-## Phase 2 — First module cut
+## Phase 2a — Top-level module cut
 
-Create a first-pass module tree in `.architecture/MANIFEST.md` using `templates/manifest.md`.
+Create the first-pass top-level module hypothesis in `.architecture/MANIFEST.md` using `templates/manifest.md`. **This phase produces only the top-level row of the Module Tree.** Recursive subdivision into children is Phase 2b.
 
 **Do not target a specific module count.** Let the project itself determine the cut. A valid top-level module has a distinct reason to exist — apply these criteria honestly and the count falls where it falls:
 
@@ -127,19 +145,55 @@ Both extremes are signals to re-examine, not to mechanically merge or split. A t
 
 Each top-level module starts as `status: hypothesis` with `confidence: low` until code evidence is gathered. Assign stable IDs at this point (`M0001-<slug>`, `M0002-<slug>`, …). `M0000-root` is the conceptual root.
 
+**Important**: when allocating IDs, use **densely-numbered top-level IDs** (`M0001`, `M0002`, …) but **leave headroom for children**: each top-level module's children will start at the next round-number base (`M0010+` for first top-level's children, `M0020+` for second's, etc. — or `M0020+` / `M0030+` if the first top-level needs many children). Gaps between groups let later self-healing add child modules without losing the namespace grouping. A future `M0083` should obviously belong to a known top-level group; `M0048` should obviously belong to a different one. That semantic mapping survives even when the MANIFEST is read out of order.
+
 ---
 
-## Phase 3 — Recursive decomposition
+## Phase 2b — Full tree planning (assign all stable IDs before writing leaf content)
 
-For each non-leaf module, in turn:
+Now extend the MANIFEST `Module Tree` and `Module Index` recursively to the **leaf level**, but **do not yet write the per-module `MODULE.md` content**. Goal: pin down every stable ID and the parent/child structure in one pass, so that:
 
-1. **Re-anchor on code**: enumerate the files and symbols belonging to this module. Use `rg -n` to map cross-file references. Read entry-point files of the node fully.
-2. **Identify seams**: where does this node have natural sub-responsibilities?
-3. **Apply split triggers** (below) — decide whether to subdivide.
-4. **Subdivide**: assign child IDs, write child module docs as hypotheses, recurse.
-5. **Or finalize as leaf**: apply leaf criteria, write the full module doc per `templates/module.md`.
+- Per-module docs (Phase 4) can reference children/siblings by stable ID from the start.
+- Inventories (Phase 2.5) can cite stable IDs.
+- A session interrupted between 2b and 4 has a complete planning artifact to resume from.
 
-**There is no depth limit.** Recurse until every leaf passes leaf criteria.
+For each top-level module from 2a, recurse:
+
+1. **Re-anchor on code**: enumerate the files and symbols belonging to this module. Use `rg -n` to map cross-file references. Read entry-point files of the node fully — enough to identify sub-responsibility seams.
+2. **Identify seams**: where does this node have natural sub-responsibilities? (Separate sub-packages, separate top-level classes, distinct lifecycle stages, different external collaborators, independent test files.)
+3. **Apply split triggers** (see Phase 3 — recursive decomposition for the full list).
+4. **Subdivide**: assign next stable IDs (incrementing through that top-level module's headroom block), record parent/child relationships in `MANIFEST.md`. Each new child starts as `status: hypothesis, confidence: low`.
+5. **Or finalize as leaf**: apply leaf criteria (see Phase 3 + self-healing-protocol leaf-criteria triggers).
+6. Continue recursion until every branch reaches a leaf candidate.
+
+By the end of Phase 2b, `MANIFEST.md`'s `Module Tree` is **complete to the leaf level** — every node has a stable ID; no leaf body content is written yet.
+
+---
+
+## Phase 2.5 — Build inventories (after MANIFEST tree, before leaf docs)
+
+With every stable ID now allocated in MANIFEST, write the inventory files planned in Phase 1.3.
+
+Create one file per category under `inventories/` using `templates/inventory.md`:
+
+- `inventories/entrypoints.md`
+- `inventories/tests.md`
+- `inventories/external-interfaces.md`
+- `inventories/generated-and-vendor.md`
+
+Each row's `Related module(s)` column **must** cite the stable ID(s) from `MANIFEST.md`. Use **anchors** (symbol / route / script name / config key) rather than line ranges that will drift. Inventory rows that reference an external system not yet documented should also be added to `interactions/external-boundaries.md` in Phase 5.
+
+This phase runs after MANIFEST tree because inventory items need to cross-reference module IDs that don't exist until the tree is decided. Running it earlier produces inventories full of placeholder IDs that must be back-filled — error-prone and wasteful.
+
+---
+
+## Phase 3 — Leaf-criteria verification (final tree check before writing docs)
+
+By the end of Phase 2b every branch of the tree reached a leaf candidate. Phase 3 is the **final verification pass** before per-module docs are written: for each leaf candidate, confirm that all leaf criteria below hold. If any fails, return to Phase 2b for further subdivision (assign new IDs, update MANIFEST tree).
+
+This phase exists as a guard against "ran out of patience and called it a leaf" — the failure mode this entire skill exists to prevent. The leaf criteria are also the canonical reference for the self-healing trigger "leaf-criteria self-check fail" (see `self-healing-protocol.md`).
+
+**There is no depth limit.** Some subtrees stop at depth 1, others at depth 4 or more. Honest application of the criteria below determines the depth.
 
 ### Split triggers — split further when ANY is true
 
@@ -241,6 +295,21 @@ Every leaf module's `MODULE.md` (under `modules/M{id}-{slug}.md`) MUST include t
 If a section genuinely doesn't apply (e.g. a stateless pure-function module), write `_(none)_` — never omit. Omission is indistinguishable from oversight.
 
 For non-leaf modules, fields like Code Map can be sparse (point at child modules instead), but Summary, Architecture Role, and the Owns/Does Not Own scope MUST be filled.
+
+### Phase 4 ordering: non-leaf first, then leaf
+
+Write per-module docs in two batches:
+
+1. **Non-leaf docs first** (top-down). Each non-leaf doc establishes module-wide invariants, the Owns / Does Not Own scope, the child subtree map, module-wide failure modes, and a Modification Guide that applies to all descendants.
+2. **Leaf docs second**. Each leaf doc references its parent's invariants by stable ID (e.g., "subject to M0001-hub's no-direct-Repository-imports rule") rather than restating them. This keeps the wiki DRY and consistent across siblings.
+
+If self-healing later changes a parent invariant, only the parent doc needs updating — descendant leaf docs that referenced the parent automatically inherit the new invariant via the cross-reference. Restating invariants in every leaf would force a cascade of edits.
+
+Within each batch, parallel subagents per top-level subtree are appropriate (see "Subagent strategy" below). Files within a batch may be written in parallel; the subagent rule (only main agent writes `.architecture/`) still applies.
+
+### Phase 4 sentinel requirement
+
+Every `modules/M*.md` MUST end with the END-OF-MODULE sentinel (the trailing HTML comment in `templates/module.md`). A file lacking the sentinel is treated as interrupted-mid-write by the resume protocol — it will be rewritten from scratch on the next session. Do not skip the sentinel because a file "looks complete enough".
 
 ---
 

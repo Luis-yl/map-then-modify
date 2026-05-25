@@ -27,6 +27,7 @@ This trades a small amount of in-task time for permanent wiki improvement.
 
 Run self-healing when **any** of the following happens during analysis or development:
 
+### Triggers during development
 - Code outside the planned edit surface must be touched.
 - An unlisted caller or callee affects the change.
 - An unlisted config controls relevant behavior.
@@ -37,7 +38,28 @@ Run self-healing when **any** of the following happens during analysis or develo
 - A test failure points to a module not in the impact set.
 - Runtime wiring differs from the manifest.
 - A module's public interface is broader than documented.
-- During mapping: a module that was thought to be a leaf turns out to need further subdivision.
+
+### Triggers during mapping — leaf-criteria self-check fail
+
+When writing a leaf module's MODULE.md (Phase 4), if **any** of the following becomes true, the planned leaf is actually a non-leaf and must be subdivided. These triggers are deliberately operational — "I felt unsure" is not enough; one of these objective conditions must be cited as the trigger.
+
+- The Summary cannot be written in 2 sentences without using `AND` / `OR` / `plus` / `; also` to enumerate features.
+- The `code_map` has more than ~10 rows whose `Role` values represent **different business concerns** (not just different stages of one workflow). A leaf with 12 rows that are all stages of one DI bootstrap is fine; a leaf with 12 rows that are 12 unrelated HTTP endpoints is not.
+- Different `code_map` rows have fundamentally different `Edit Guidance` for unrelated reasons (some pure CRUD, others protocol-critical; some safe, others requires-careful-context for incompatible reasons).
+- The module has separate inbound interaction patterns serving separate parts of itself (e.g., admin-session auth for one subset, node-Bearer auth for another subset).
+- Removing any single `code_map` row would leave a coherent module behind — strong sign of separable responsibility.
+- The module's `Public Surface` cannot be summarized in one "what does this module expose" sentence without enumerating multiple unrelated surfaces.
+
+If any trigger fires:
+
+1. Pause the leaf doc.
+2. Mark the original ID `status: split` in MANIFEST + write its (now-non-leaf) overview doc that delegates to children.
+3. Assign next stable IDs to children using the parent's headroom block (`progress.json.next_id`, incrementing).
+4. Update MANIFEST.md `Module Tree` + `Module Index` + relevant `Concern Index` row.
+5. Write child MODULE.md docs (each may itself be a leaf or recurse further).
+6. Update relevant `interactions/*.md` edges (edges that pointed at the parent now point at the appropriate child).
+7. Write `self-healing/YYYY-MM-DD-HHMM-leaf-split-<old-id>.md` recording the split + rationale.
+8. Resume — writing the children's docs, not the original.
 
 ---
 

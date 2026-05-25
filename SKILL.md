@@ -156,14 +156,16 @@ Every wiki file is read under stress, possibly months later, by future Agents (a
 
 1. Create `.architecture/` if missing.
 2. Read `references/analysis-protocol.md`.
-3. Write `.architecture/.meta/preflight.json` (repo metadata census).
-4. Build the top-level module cut. Do not target a count — apply the Phase 2 criteria in `analysis-protocol.md` and let the project's actual seams determine the number. Re-examine only if you end up with fewer than 3 (under-decomposed) or more than ~25 (likely conflating depth with breadth).
-5. Recursively decompose. No depth limit. Stop a branch when leaf criteria (in `analysis-protocol.md`) are met.
-6. For each leaf, write `modules/M{id}-{slug}.md` per `templates/module.md`.
-7. Stitch global interaction maps under `interactions/`.
-8. Audit coverage → write `COVERAGE.md`. Audit risks → write `RISKS.md`.
-9. Record the run in `analysis-runs/`. Mark `progress.json` complete.
-10. Final report: ≤10 lines summarizing modules mapped, wiki location, flagged risks.
+3. **Phase 0/1** — preflight + census: write `.architecture/.meta/preflight.json` (repo metadata) + initialize `RISKS.md` with any anomalies surfaced (stale docs, placeholder build steps, vendored license boundaries, etc.) + plan inventory categories.
+4. **Phase 2a** — top-level module cut. Do not target a count — apply the criteria in `analysis-protocol.md` Phase 2a and let the project's actual seams determine the number. Allocate stable IDs with headroom (`M0001+` top-level, `M0010+` / `M0020+` / … for each top-level's children).
+5. **Phase 2b** — full tree planning to leaf level. Assign every stable ID before writing any per-module doc content. MANIFEST `Module Tree` is complete after this phase.
+6. **Phase 2.5** — write the 4 inventories under `inventories/`. Inventory rows cite stable IDs from MANIFEST.
+7. **Phase 3** — leaf-criteria verification. For each leaf candidate, confirm all leaf criteria hold; if any fails, return to Phase 2b and subdivide.
+8. **Phase 4** — fill module docs: **non-leaves first** (establish module-wide invariants), **then leaves** (reference parent invariants by ID). Every `modules/M*.md` ends with the END-OF-MODULE sentinel.
+9. **Phase 5** — stitch global interaction maps under `interactions/`.
+10. **Phase 6/7** — audit coverage → write `COVERAGE.md`. Audit risks → finalize `RISKS.md` (aggregate from each MODULE.md `## Unknowns And Risks`).
+11. **Phase 7 end** — write `.architecture/README.md`; write `.architecture/.meta/progress.json` as a one-shot completion snapshot; finalize `analysis-runs/<...>.md` with the `Finished:` timestamp.
+12. Final report to the user: ≤10 lines summarizing modules mapped, wiki location, top risks, and the suggestion that future dev tasks will use this wiki to stay safe.
 
 ### DEVELOPMENT mode
 
