@@ -132,3 +132,6 @@ Non-obvious things future Agents / humans must know. Mined from comments, git lo
 | Claim | Evidence |
 | --- | --- |
 | {{claim}} | `{{path}}:{{lines}}` (+ context: symbol / test / config / command output) |
+
+<!-- END OF MODULE DOC — do not remove. Used by the resume protocol to detect partial writes. A MODULE.md missing this trailing line is treated as interrupted-mid-write and must be rewritten from scratch. -->
+

@@ -169,25 +169,52 @@ For each non-leaf module, in turn:
 
 **Do not mark a module as leaf merely because time is running out.** That is the failure mode this skill exists to prevent.
 
-### Progress tracking & resume
+### Progress tracking & resume — filesystem-based, not journal-based
 
-Maintain `.architecture/.meta/progress.json`:
+`.architecture/.meta/progress.json` is a **completion snapshot** written **once** at the very end of Phase 7. It is NOT a live execution journal. Do not attempt to maintain it incrementally — that is unreliable across long runs.
+
+Resume after interruption uses **filesystem state**, not the JSON.
+
+#### Resume protocol (when invoked with existing `MANIFEST.md` but missing terminal artifacts)
+
+1. **Read `MANIFEST.md`** — this is the canonical planned tree. Every node in `Module Index` is a target.
+2. **Scan `modules/`** — list existing `M*.md` files.
+3. **Validate each existing file**: check it ends with the END-OF-MODULE sentinel (see `templates/module.md` — a literal trailing comment line). A file without the sentinel is **interrupted-mid-write** and must be **rewritten from scratch** (idempotent re-write).
+4. **Compute the gap** = `MANIFEST.md` `Module Index` IDs minus the set of validated `modules/M*.md` files. This is the work queue.
+5. **Process the gap** in MANIFEST order. Top-down (non-leaves first), then leaves, per Phase 4 ordering.
+6. **Also check terminal artifacts**: if `interactions/`, `inventories/`, `COVERAGE.md`, `RISKS.md`, `README.md` are missing, queue Phases 5–7 after leaves complete.
+
+#### `progress.json` schema (written once, at completion)
 
 ```json
 {
-  "complete": false,
+  "complete": true,
   "started_at": "<ISO8601>",
-  "updated_at": "<ISO8601>",
-  "next_id": 47,
-  "queue": [
-    {"id": "M0003-consensus-pow", "state": "in_progress", "parent": "M0003-consensus", "depth": 2},
-    {"id": "M0007-p2p", "state": "pending", "parent": null, "depth": 0}
-  ],
-  "stats": {"modules_total": 0, "leaves_done": 0, "files_read": 0}
+  "updated_at": "<ISO8601 of final write>",
+  "next_id": 80,
+  "stats": {
+    "modules_total": 64,
+    "leaves_done": 57,
+    "non_leaves": 7,
+    "inventories": 4,
+    "interactions": 4,
+    "decisions": 0,
+    "analysis_runs": 1,
+    "risks_recorded": 30
+  },
+  "next_frontier": [
+    "Deep-dive area X if/when it stabilizes",
+    "Refresh affected leaves after refactor Y lands"
+  ]
 }
 ```
 
-Update after each module. On resume: treat any `in_progress` as interrupted — redo that node from scratch (idempotent re-write).
+Notes:
+- `next_id` reflects the **next free** stable ID to assign. New modules added by future development MUST increment from here.
+- `stats` is informational. Counts here should match what is on disk; they are not authoritative if a discrepancy is found (the disk is authoritative).
+- `next_frontier` is forward-looking. Each entry describes a known incomplete area or a deferred deep-dive — recorded so the next analysis run knows where to pick up.
+
+If a session aborts before `progress.json` is written, the next run reads MANIFEST + filesystem and resumes — the absent `progress.json` is itself a signal that mapping is incomplete.
 
 ---
 
@@ -306,20 +333,19 @@ After all leaf modules are written:
 
 ## Stopping condition
 
-Mark `progress.json` as `"complete": true` only after **all** of:
+Write `progress.json` (one shot, completion snapshot) only after **all** of:
 
 - `.architecture/README.md` written (from `templates/architecture-readme.md`).
 - `.architecture/MANIFEST.md` written and lists every module ID with status.
 - `.architecture/COVERAGE.md` classifies every first-party file.
 - `.architecture/RISKS.md` records all known uncertainty.
-- `modules/M*-*.md` written for every module in the tree.
+- `modules/M*.md` written for every module in the tree, **and every file ends with the END-OF-MODULE sentinel** (`<!-- END OF MODULE DOC -->`). Files missing the sentinel were interrupted mid-write — re-write them before completion.
 - `interactions/*.md` written for the 4 standard maps.
 - `inventories/*.md` written for entrypoints, tests, external interfaces, generated/vendor.
-- Analysis run record written in `analysis-runs/`.
-- All inbound/outbound references resolve symmetrically.
-- No `in_progress` entries remain in `progress.json`.
+- Analysis run record written in `analysis-runs/` with `Finished:` timestamp filled in.
+- All inbound/outbound references resolve symmetrically across modules.
 
-If the repo is too large to finish in one session, leave a coherent partial wiki with explicit frontier items in `COVERAGE.md` and `RISKS.md`, and mark `"complete": false` with a clear `next_frontier` queue.
+If the repo is too large to finish in one session, leave a coherent partial wiki: every existing `modules/M*.md` must be sentinel-terminated (no half-finished files), and `COVERAGE.md` / `RISKS.md` are not yet required. The absence of `progress.json` is itself the signal that mapping is incomplete — the next session resumes by filesystem scan.
 
 ---
 

@@ -248,28 +248,57 @@ Never mark a step complete while its verification is failing.
 
 ---
 
-## Phase 8 — Update architecture docs
+## Phase 8 — Mandatory Wiki Sync
 
-Update `.architecture/` to reflect the new state. Mandatory whenever the change touched:
+**A dev task is NOT complete until this phase passes.** Code edits, tests, and successful verification are necessary but not sufficient — the wiki and the codebase must be in a consistent state at the end of every dev task. A stale wiki at the end of a task is a regression that misleads the next dev task in this area.
 
-- **Responsibility** of a module → update Summary, Owns/Does Not Own.
-- **Code ranges** (lines shifted, files split, new files) → update `code_map`.
-- **Interactions** (new caller, dropped dependency, signature change) → update Inbound/Outbound + the relevant `interactions/*.md`.
-- **State ownership** → update State And Data Ownership.
-- **Invariants** → update Invariants.
-- **Failure modes** → update Failure Modes.
-- **Tests** → update Tests And Verification + `inventories/tests.md`.
-- **External behavior** (route, ABI, public surface) → update `inventories/external-interfaces.md`.
-- **Generated artifacts** → update `inventories/generated-and-vendor.md`.
-- **Risks** → update or close entries in `RISKS.md`.
+This is enforced by the completion gate at the end of this phase. Do not report the task complete unless every relevant item is done.
 
-Bump `last_verified` on every touched module doc.
+### 8.1 Wiki sync actions, by change type
 
-If the change added a brand-new module, write its `modules/M*.md` from scratch using `templates/module.md`, add it to `MANIFEST.md`, and update `ARCHITECTURE.md` (`README.md` in `.architecture/`) if the addition is structurally significant.
+For each shape of change in this dev task, execute ALL listed sync actions. Multiple change types in one task → execute all matching rows.
 
-If the change deleted a module (rare), set `status: deprecated` in its doc (don't delete the file — it preserves history), prune `MANIFEST.md`'s "Module Index" row, scrub references in other modules' inbound/outbound lists.
+| Change type | Required wiki sync actions |
+|---|---|
+| Modified existing module's code (no contract change) | Update affected `modules/M####-<slug>.md`: refresh `code_map` line ranges, bump `last_verified` (date + SHA), add/adjust `Evidence Log` rows if symbols changed. |
+| Changed a module's public surface (signature, route shape, event payload, ABI) | Update module's `Public Surface` table. For every inbound caller (per module's `Inbound Interactions`), update the corresponding `Outbound Interactions` row on the calling module. Update the matching `interactions/*.md` edge. If the surface is externally visible: update `inventories/external-interfaces.md`. |
+| Added a new function / route / event / job to existing module | Add row to module's `code_map`. If exported, add to `Public Surface`. If a new route or RPC method: add to `inventories/external-interfaces.md`. If a new entrypoint (CLI / daemon / cron / scheduled job): add to `inventories/entrypoints.md`. |
+| Added a new test | Update module's `Tests And Verification` table. Add row to `inventories/tests.md`. |
+| **Added a new module** (a new responsibility boundary not in the existing tree) | (a) Read `progress.json.next_id` for the next stable ID; increment for the new module. (b) Write a full `modules/M####-<slug>.md` from `templates/module.md` — all required sections per `analysis-protocol.md` Phase 4, ending with the END-OF-MODULE sentinel. (c) Add a row to `MANIFEST.md` `Module Index`. Insert into `MANIFEST.md` `Module Tree` at the correct parent. Update `MANIFEST.md` `Concern Index` row(s) that this module participates in. (d) Update parent module's `Scope.Owns` / `Scope.Does Not Own` / child subtree map. (e) Add all relevant edges to `interactions/*.md` (runtime / data-flow / build-and-config / external-boundaries as applicable). (f) Update relevant `inventories/*.md`. (g) Update `progress.json` `next_id` and `stats.modules_total` / `stats.leaves_done` / `stats.non_leaves`. |
+| **Removed a module** | (a) Set `status: deprecated` in the module's MODULE.md — do NOT delete the file (it preserves history and old dev-plan references). (b) Update `MANIFEST.md` `Module Index` row to show `status: deprecated`. Remove from `Module Tree` rendering (keep the ID reserved — never reuse). (c) Scrub references in every other module's `Inbound Interactions` / `Outbound Interactions`. (d) Update interaction maps. (e) Update inventories. (f) Update `progress.json` stats. |
+| **Renamed a module** (responsibility unchanged, label change only) | Keep the stable ID. Change only the `title` field in module frontmatter + `MANIFEST.md` `Module Index` title column. Do NOT change directory name, slug, or ID. |
+| Module **split** (one leaf became multiple children) | Parent doc: set `status: split`, replace body with redirect pointers to children. Children: assign next stable IDs (each), write full MODULE.md each. Update MANIFEST tree, parent's child list, interaction edges. |
+| Module **merged** (two modules collapsed into one) | Surviving module absorbs. Other module(s): set `status: merged`, body becomes a redirect pointer. Do NOT delete merged docs. Scrub references in interaction maps and other modules. |
+| Changed an interaction edge (added / removed / signature changed) | Update both endpoints' `Inbound` / `Outbound` tables AND the corresponding `interactions/*.md` edge-list row. |
+| Changed a state ownership claim | Update module's `State And Data Ownership`. Update `interactions/data-flow.md`. |
+| Changed an invariant | Update module's `Invariants` section. If the change *weakens* an existing invariant (relaxing a constraint that other modules depend on), record a row in `RISKS.md`. |
+| Changed external / network / storage boundary | Update `inventories/external-interfaces.md` and `interactions/external-boundaries.md`. |
+| Generated code's generator changed | Update `inventories/generated-and-vendor.md`. Document the new generator command. Regenerate artifacts via the documented command. |
+| Discovered a new project-level risk during this change | Add a row to `RISKS.md` Active Risks. Reference the source module in the `Area` column. |
+| Behavioral change that does not touch any tracked aspect above | Bump `last_verified` on the touched module(s). State explicitly in the final report that no other wiki sync was required and why. |
 
-If docs did **not** change (because the change was purely behavioral and didn't touch anything the wiki tracks), state that explicitly in the final report.
+### 8.2 Completion gate (checklist)
+
+Before reporting the task complete to the user, verify EVERY item below. If any item is false, the task is not done — either complete it, or explicitly mark the deferral as a new entry in `RISKS.md` with reason.
+
+- [ ] Every touched module's `last_verified` field is bumped to today's date AND the current commit SHA.
+- [ ] Every new module has a full `MODULE.md` (not a stub) per `templates/module.md`, ending with the END-OF-MODULE sentinel.
+- [ ] `MANIFEST.md` `Module Tree`, `Module Index`, and `Concern Index` reflect every add / remove / rename / split / merge from this task.
+- [ ] Every affected interaction edge is updated in the relevant `interactions/*.md`.
+- [ ] Every affected inventory row is updated in `inventories/*.md`.
+- [ ] `progress.json` `next_id`, `stats.modules_total`, `stats.leaves_done`, `stats.non_leaves` reflect new totals.
+- [ ] No module's `Inbound` / `Outbound` table references a deleted or non-existent module ID.
+- [ ] Every row in any touched module's `## Unknowns And Risks` either appears in `RISKS.md` or is explicitly resolved by this task.
+- [ ] If the task added a new external boundary (HTTP route, RPC method, event topic, generated artifact, persistence schema), it appears in the correct `inventories/*.md` AND `interactions/external-boundaries.md` where applicable.
+- [ ] No `modules/M*.md` file lacks the END-OF-MODULE sentinel (signals interrupted-mid-write).
+
+### 8.3 If no wiki sync is required
+
+If the change is purely behavioral and touched nothing the wiki tracks (e.g., an internal optimization with no observable contract change), state this explicitly in the final report:
+
+> "No wiki sync was required for this task because the change touched only internal-implementation aspects not tracked by the wiki (specifically: [name what was touched])."
+
+This statement is itself a sync artifact — it tells future readers that the absence of wiki edits was deliberate, not forgotten.
 
 ---
 
@@ -318,7 +347,7 @@ Compute: `git rev-list <max(last_verified_sha across loaded modules)>..HEAD --co
 Follow the spine but compress. One-section plan, one edit, run tests. Don't over-engineer for trivial changes — do follow the spine.
 
 ### Request requires a new module
-Write its `modules/M*.md` as part of phase 8 with all sections populated. Assign the next stable ID. Do not defer — the next request will need it.
+Follow the **"Added a new module"** row in Phase 8.1 — full MODULE.md + MANIFEST tree/index/concern updates + parent's Owns/Does Not Own + interaction edges + inventory entries + `progress.json` `next_id` + `stats` updates are all mandatory. Do not defer — the next dev task in this area will need a complete wiki.
 
 ### Generated/vendored code is involved
 See `boundary-and-evidence-rules.md` for the generated/vendor rules. Edit the generator source, not the artifact, unless the repo clearly treats the artifact as source.

@@ -40,24 +40,25 @@ This skill exists to defeat one specific failure mode: an Agent edits a file in 
 ```bash
 PROJECT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 ARCH_DIR="$PROJECT_ROOT/.architecture"
-if [ -f "$ARCH_DIR/MANIFEST.md" ]; then
+# Mapping is "complete" only when ALL terminal artifacts exist — these
+# are written together at the end of Phase 7. progress.json is NOT a
+# reliable signal during execution (it is updated only at completion).
+if [ -f "$ARCH_DIR/MANIFEST.md" ] && [ -f "$ARCH_DIR/RISKS.md" ] && [ -f "$ARCH_DIR/COVERAGE.md" ] && [ -f "$ARCH_DIR/README.md" ]; then
   echo "MODE=develop"
-  echo "ARCH_DIR=$ARCH_DIR"
-  if [ -f "$ARCH_DIR/.meta/progress.json" ] && ! grep -q '"complete": *true' "$ARCH_DIR/.meta/progress.json" 2>/dev/null; then
-    echo "STATE=mapping_in_progress"
-  else
-    echo "STATE=ready"
-  fi
+  echo "STATE=ready"
+elif [ -f "$ARCH_DIR/MANIFEST.md" ]; then
+  echo "MODE=mapping"
+  echo "STATE=resuming"
 else
   echo "MODE=mapping"
-  echo "ARCH_DIR=$ARCH_DIR"
   echo "STATE=fresh"
 fi
+echo "ARCH_DIR=$ARCH_DIR"
 ```
 
-- **`MODE=mapping`** → load `references/analysis-protocol.md` + `references/boundary-and-evidence-rules.md`. Build the wiki.
+- **`MODE=mapping`** + **`STATE=fresh`** → load `references/analysis-protocol.md` + `references/boundary-and-evidence-rules.md`. Build the wiki from scratch.
+- **`MODE=mapping`** + **`STATE=resuming`** → load the same references. Use the filesystem-based resume protocol in `analysis-protocol.md` (scan existing `modules/*.md`, cross-reference `MANIFEST.md`, find gaps, validate sentinel on each existing file). **Do not rely on `progress.json`** — it is a completion snapshot, not a live tracker.
 - **`MODE=develop`** + **`STATE=ready`** → load `references/development-protocol.md` + `references/boundary-and-evidence-rules.md`. Use the wiki to guide the change.
-- **`MODE=develop`** + **`STATE=mapping_in_progress`** → resume mapping from `.architecture/.meta/progress.json` first, then proceed.
 
 When self-healing triggers inside either mode, additionally load `references/self-healing-protocol.md`.
 
@@ -95,8 +96,18 @@ Every module doc, every code-map entry, every interaction edge carries a `confid
 ### P7. Stable IDs, mutable names
 Module IDs (`M0000-root`, `M0001-<slug>`, …) are stable and never renumbered or reused. Titles can change. Splits keep the parent ID and create new child IDs. Merges preserve the old doc with `status: merged` and point to the survivor. This is what keeps dev plans, risks, and interaction maps from rotting.
 
-### P8. Wiki is a living artifact
-Every successful dev task that changes module behavior MUST update `.architecture/` in the same logical unit. A stale wiki is worse than no wiki — it actively misleads.
+### P8. Wiki sync is part of "task done", not after it
+A dev task is **not complete** until the wiki reflects the new code state. This is a hard gate, not a guideline. Stale wiki is worse than no wiki — it actively misleads the next dev task.
+
+Concretely: every code change that affects **responsibility / state / interactions / public surface / invariants / failure modes / tests / external boundaries / generators** MUST be reflected in the wiki in the same logical unit of work. Not "later". Not "next pass". The same unit.
+
+This applies symmetrically to all change shapes:
+- **Modify** an existing module → bump `last_verified`, update affected sections.
+- **Add** a new module → write its full `MODULE.md`, update MANIFEST tree + index + concern index, update parent's "Owns/Does Not Own", update interactions / inventories / `progress.json` stats.
+- **Remove** a module → set `status: deprecated` (do not delete file), prune MANIFEST tree, scrub cross-references.
+- **Rename** a module → keep stable ID, change `title` only.
+
+The exhaustive change-type → sync-actions table and completion gate live in `references/development-protocol.md` Phase 8 (Mandatory Wiki Sync).
 
 ### P9. Production-grade, not demo-grade
 Every wiki file is read under stress, possibly months later, by future Agents (and the user). Each must be self-contained: a reader landing on `modules/M0042-pow-difficulty/M.md` cold should understand the module without reading anything else. No "see above", no implicit context. No emojis.
@@ -188,7 +199,8 @@ Every wiki file is read under stress, possibly months later, by future Agents (a
 - Every first-party code area is `covered`, `partially covered` with reason, or explicitly `excluded`.
 - Every leaf module has a range-level code map and interaction summary.
 - Risks are recorded in `RISKS.md`, not hidden.
-- `progress.json` has `"complete": true`.
+- Every `modules/M*.md` ends with the END-OF-MODULE sentinel (see `templates/module.md`) — this distinguishes complete files from files interrupted mid-write.
+- `progress.json` is written ONCE at this point as a completion snapshot (`"complete": true` + stats + `next_frontier`). It is not maintained during execution.
 
 **Development is complete** when:
 - The dev plan was written before any code edit.
