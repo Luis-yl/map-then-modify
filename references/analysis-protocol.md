@@ -98,7 +98,7 @@ If a claim has no evidence, mark it `confidence: low` or `unknown` and either ch
 
 Create a first-pass module tree in `.architecture/MANIFEST.md` using `templates/manifest.md`.
 
-**Aim for roughly 6–14 top-level modules**, but correctness > count. A valid top-level module has a distinct reason to exist:
+**Do not target a specific module count.** Let the project itself determine the cut. A valid top-level module has a distinct reason to exist — apply these criteria honestly and the count falls where it falls:
 
 - Owns a protocol layer (consensus, p2p, mempool, RPC).
 - Owns persistent state (storage engine, chain state, account DB).
@@ -108,6 +108,15 @@ Create a first-pass module tree in `.architecture/MANIFEST.md` using `templates/
 - Owns user-facing workflow (wallet, CLI commands, dashboard).
 - Owns integration with an external system (oracle adapter, bridge, indexer feed).
 - Owns tests or fixtures for a major subsystem.
+
+### Sanity rails (catch egregious failures, not anchor a target)
+
+After your first cut, audit against these two boundaries. They are **failure detectors**, not targets — do not adjust the cut just to fall inside the band.
+
+- **Fewer than 3 top-level modules?** You have not decomposed yet. Re-examine — almost no real project's responsibilities collapse this far. Look for hidden seams (build vs runtime, persistent state vs in-memory state, public API vs internal core).
+- **More than ~25 top-level modules?** You are likely conflating depth with breadth — several of these are probably children of broader concerns. Try one round of grouping: which of these share a lifecycle, share state, or change for the same reasons?
+
+Both extremes are signals to re-examine, not to mechanically merge or split. A tiny utility legitimately has 3 modules. A kubernetes-scale monorepo legitimately has 30+. The criteria above govern; these rails only flag when you may have applied them lazily.
 
 **Common domain patterns** (use as hints, not as a checklist):
 

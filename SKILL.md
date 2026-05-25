@@ -146,7 +146,7 @@ Every wiki file is read under stress, possibly months later, by future Agents (a
 1. Create `.architecture/` if missing.
 2. Read `references/analysis-protocol.md`.
 3. Write `.architecture/.meta/preflight.json` (repo metadata census).
-4. Build the top-level module cut (~6–14 modules, but correctness > count).
+4. Build the top-level module cut. Do not target a count — apply the Phase 2 criteria in `analysis-protocol.md` and let the project's actual seams determine the number. Re-examine only if you end up with fewer than 3 (under-decomposed) or more than ~25 (likely conflating depth with breadth).
 5. Recursively decompose. No depth limit. Stop a branch when leaf criteria (in `analysis-protocol.md`) are met.
 6. For each leaf, write `modules/M{id}-{slug}.md` per `templates/module.md`.
 7. Stitch global interaction maps under `interactions/`.
