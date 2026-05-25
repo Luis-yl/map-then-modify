@@ -351,19 +351,46 @@ A wiki where some code is `unknown` is acceptable. A wiki that pretends all code
 
 ---
 
-## Phase 7 — Risk audit
+## Phase 7 — Risk audit (aggregate from authoritative source only)
 
-Update `.architecture/RISKS.md` per `templates/risks.md` with:
+`RISKS.md` was initialized in Phase 1.4 with preflight anomalies. Phase 7 is the **aggregation pass** that pulls per-module risks discovered during Phases 4–6 into the master file.
 
-- Low-confidence modules.
+### Aggregation rule
+
+The **only authoritative per-module risk source** is each module's `## Unknowns And Risks` section. The Phase 7 aggregator MUST scan every `modules/M*.md` and lift every row of `## Unknowns And Risks` into `RISKS.md` Active Risks (assigning a new `R####` ID per item).
+
+Code Map "Notes" columns, Inbound/Outbound "Notes", and other free-text annotations are **NOT** scanned by the aggregator. If a writer noted a warning in a Code Map row (e.g., "verify-later", "drop-named", "potential drift"), they MUST also have promoted it to `## Unknowns And Risks` in the same module doc when they wrote it (per the template Code Map note). Phase 7 does not search the whole module doc for warning prose — that would be unreliable and produce false positives.
+
+### Per-module aggregation procedure
+
+For every `modules/M*.md`, in MANIFEST order:
+
+1. Read the `## Unknowns And Risks` section.
+2. For each bullet, draft a `RISKS.md` Active Risks row:
+   - `R####` — next free risk ID (the master RISKS.md tracks this).
+   - `Area` — the source module's stable ID (`M####-<slug>`).
+   - `Risk` — the concrete concern, restated in one sentence.
+   - `Severity` — `low` | `medium` | `high` | `critical`. Default to `medium` if unsure; downgrade only with explicit reason.
+   - `Confidence` — how sure the aggregator is this is actually a risk.
+   - `Mitigation` — `investigate` / `monitor` / `accepted` / a concrete plan / `defer to phase-2`.
+   - `Owner` — the source module ID (same as Area unless ownership is shared).
+3. If the bullet duplicates an existing risk in `RISKS.md` (e.g., the same gap mentioned in two modules), merge — extend the existing row's `Area` column to list both module IDs.
+4. After aggregation, walk the new `RISKS.md` Active Risks. Surface to the user in the final report any `severity: high|critical` items.
+
+### Additional Phase 7 sources
+
+Beyond `## Unknowns And Risks` aggregation, also audit and add rows for:
+
+- Low-confidence modules (`confidence: low` or `unknown` in frontmatter).
 - Inferred behavior not verified by tests.
 - Dynamic dispatch / reflection / plugin loaders that hide static structure.
 - Generated code whose generator source is unclear or missing.
 - External systems not available for verification (testnets, oracles, third-party APIs).
 - Circular dependencies.
 - Broad edit ranges (single anchor spans > ~500 LOC).
-- Missing tests on critical modules (consensus, money, auth, upgrade paths).
+- Missing tests on critical modules.
 - Stale docs (line ranges already out of sync at the time of writing).
+- Modules with no inbound and no outbound edges that are not entrypoints (suspect dead code).
 
 Risks are not failures. Hidden risks are failures.
 
