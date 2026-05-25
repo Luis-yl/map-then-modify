@@ -151,7 +151,8 @@ Use these types consistently across module docs and interaction maps:
 | Type | Meaning |
 |---|---|
 | `call` | Direct function / method / module call. |
-| `event` | Event bus, callback, hook, signal, observer, pub/sub. |
+| `event_publish` | This module emits an event / publishes to a bus / fires a callback / signals a hook. |
+| `event_subscribe` | This module listens for events / subscribes to a bus / registers a callback handler. |
 | `data` | Reads or writes a shared data structure or store. |
 | `config` | Behavior controlled by a configuration value. |
 | `build` | Build-time or generation dependency. |
@@ -160,7 +161,18 @@ Use these types consistently across module docs and interaction maps:
 | `test` | Tests or fixtures defining expected behavior. |
 | `runtime` | Process lifecycle, scheduler, worker, daemon, plugin loader. |
 
+`event` is split into `event_publish` and `event_subscribe` because blast-radius reasoning needs the direction: "if I change what event `foo` carries, who breaks?" answers via `event_subscribe(foo)` edges, not just any `event` edge.
+
 An edge can have multiple types if it genuinely combines them (e.g., a function call that also persists state could be `call+storage`). Prefer a single primary type when possible — clearer for blast-radius reasoning.
+
+### External endpoints
+
+Edges between a module and an external system (HTTP API, subprocess, filesystem, third-party service) use the external endpoint as one side of `From` / `To`. Format:
+
+- Bracketed label in backticks: `` `codex subprocess` ``, `` `OpenAI HTTP` ``, `` `(fs data/lifecycle-events/*.jsonl)` ``, `` `(external: stripe API)` ``.
+- Each external label MUST also appear as a row in `inventories/external-interfaces.md` (or `inventories/generated-and-vendor.md` for build-time external deps) so the edge has a discoverable anchor. Label and inventory row use the same wording.
+
+Without this rule, external edges become anonymous notes — hard to trace what "codex subprocess" means in three different module docs.
 
 ---
 

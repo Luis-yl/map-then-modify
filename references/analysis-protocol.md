@@ -23,22 +23,36 @@ Write `.architecture/.meta/preflight.json` with the structured snapshot:
 ```json
 {
   "repo_root": "<abs path>",
+  "repo_name": "<name>",
   "branch": "<name>",
   "commit": "<sha>",
   "analyzed_at": "<ISO8601>",
-  "languages": ["go", "solidity", ...],
-  "package_managers": ["go.mod", "foundry.toml", ...],
-  "build_systems": ["make", "foundry", ...],
-  "entry_points_candidates": ["cmd/node/main.go", ...],
-  "test_dirs": ["tests/", "contracts/test/", ...],
-  "generated_paths": ["pb/", "abi/", ...],
-  "vendored_paths": ["vendor/", "third_party/", ...],
-  "doc_paths": ["docs/", "README.md", ...],
+  "languages": ["..."],
+  "package_managers": ["..."],
+  "build_systems": ["..."],
+  "entry_points_candidates": ["..."],
+  "test_dirs": ["..."],
+  "generated_paths": ["..."],
+  "vendored_paths": ["..."],
+  "doc_paths": ["..."],
   "loc_total": 0,
-  "loc_by_top_dir": {"cmd": 0, "internal": 0, ...},
-  "file_count": 0
+  "loc_by_top_dir": {"...": 0},
+  "file_count": 0,
+  "preflight_warnings": [
+    "<each entry: a project-self-issue surfaced during the census — for example: stale top-level documentation drift vs current tree, placeholder build/lint scripts that look real but do nothing, sync-conflict files in source tree, license-isolated subtrees, etc.>"
+  ]
 }
 ```
+
+**About `preflight_warnings`**: this field is **mandatory** even if empty. Real projects almost always have one — every `preflight_warnings` row also becomes an initial entry in `RISKS.md` (Phase 1.4). Capturing these at the very start means later phases work from a known-stale baseline, not pretending the project is pristine.
+
+Optional fields when relevant to the project's domain — include them when they would matter for future dev tasks:
+
+- `timezone_pinned` — a project-level invariant on time handling (e.g., `"Asia/Shanghai (set at src/main.ts:2)"`). Time-sensitive projects break in subtle ways without this.
+- `non_workspace_runtime_dirs` — in a monorepo, top-level directories that contain meaningful code but are not declared workspaces. They are easy to miss in the cut.
+- `active_research_threads` — pointers to in-flight refactor / investigation work (research docs, RFCs, project memory) that will likely churn parts of the architecture in coming weeks. Signals upcoming wiki staleness.
+
+If a field genuinely doesn't apply, omit it — these are project-shape dependent. The mandatory fields above are not optional.
 
 Then record this run's start in `analysis-runs/YYYY-MM-DD-HHMM-initial.md` (use `templates/analysis-run.md`).
 
@@ -274,7 +288,9 @@ If a session aborts before `progress.json` is written, the next run reads MANIFE
 
 ## Phase 4 — Module documentation
 
-Every leaf module's `MODULE.md` (under `modules/M{id}-{slug}.md`) MUST include the full set of sections from `templates/module.md`:
+Every leaf module's `MODULE.md` (under `modules/M{id}-{slug}.md`) MUST include the full set of sections from `templates/module.md`. For modules that own pure documents (contracts, manuals, policies) rather than executable code, see `templates/examples/module-non-code-leaf.md` for a worked variant using structural anchors instead of line ranges.
+
+Required sections:
 
 - frontmatter: `id`, `title`, `parent`, `status`, `leaf`, `confidence`, `last_verified`
 - Summary

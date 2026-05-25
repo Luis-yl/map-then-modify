@@ -34,6 +34,13 @@ last_verified_sha: "{{git_sha}}"
   (Owns / Does Not Own), Inbound Interactions, Outbound Interactions,
   Modification Guide, Gotchas (if any), Unknowns And Risks, Evidence Log,
   and the trailing END-OF-MODULE sentinel.
+
+  Special case: PURE-DOCUMENT LEAF (a module that owns documents — contracts,
+  manuals, policies — rather than executable code). See
+  `templates/examples/module-non-code-leaf.md` for a worked example showing
+  how to use structural anchors (`## Section Header`) and `Lines: full`
+  instead of line ranges, and how to document the enforceability gap in
+  Unknowns And Risks instead of downgrading `confidence`.
 -->
 
 # M{{####}}-{{slug}}: {{Module title}}
@@ -150,10 +157,20 @@ Complete only when `leaf: true`. Every item must be ticked.
 
 ## Gotchas
 
-Non-obvious things future Agents / humans must know. Mined from comments, git log, and your own read.
+Non-obvious things future Agents / humans must know. Mined from `git log` on the relevant files, code comments, and your own reading. The goal: any reader landing on this module under stress should NOT be surprised. Include all of:
 
-- {{Gotcha — e.g., "Hand-rolled crypto: do not refactor without consulting M0099-crypto-audit."}}
-- {{Gotcha — e.g., "Off-by-one in version 0.4 retained for backwards compatibility; see commit abc123."}}
+- **Historical context** — why does this code exist *in this exact shape*? Often the answer is "back-port self-heal from when X wasn't tracked yet" or "kept this odd structure because we tried Y and it broke Z". Future readers cannot mine `git log` for every module — pre-mine it here.
+- **Anti-refactor reasons** — code that looks awkward but the awkward shape is load-bearing. Example: "this 200-line if-block is ugly but preserves the test-injection surface; refactor would require updating 30 test files."
+- **Version-conditional behavior** — "v0.4 retained an off-by-one for backwards compat; see commit `abc123`."
+- **Hand-rolled non-standard library use** — "hand-rolled crypto: do not refactor without consulting M####-crypto-audit."
+- **"Do not touch X without Y" warnings** — load-bearing implicit contracts not enforced by the type system or tests.
+- **Incident references** — code that exists or persists because of a past incident. Cite the incident date / commit / postmortem.
+
+Examples (replace with your module's actual gotchas):
+
+- {{Historical context — e.g., "`reconcilePromotedCounts()` exists because early data was missing the total_promoted column; it's a back-port self-heal."}}
+- {{Anti-refactor — e.g., "The 230-line feature-flag block makes buildApp() hard to read. Future refactor candidate, but the in-app branching keeps the test-injection surface stable."}}
+- {{Hand-rolled — e.g., "Hand-rolled BLS signature verify in `crypto/bls.go`; do not replace with library without protocol-team review."}}
 
 ## Unknowns And Risks
 

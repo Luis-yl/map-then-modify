@@ -8,9 +8,15 @@ Last updated: `{{YYYY-MM-DD HH:MM}}`
 
 ## Edge List
 
+> **From / To column conventions**:
+> - A module ID: `M####-<slug>` — the most common case.
+> - An external system label in backticks: `` `codex subprocess` ``, `` `OpenAI HTTP` ``, `` `SQLite (fs)` ``, `` `(fs data/foo/*.jsonl)` ``, `` `(external: stripe API)` ``. External labels SHOULD also appear as a row in `inventories/external-interfaces.md` so the edge has a discoverable anchor.
+>
+> **Type column** — use one of the 10 edge types from `references/boundary-and-evidence-rules.md` §8. The two event sub-types are distinct: `event_publish` (this module emits) and `event_subscribe` (this module listens). Use both directions explicitly when both endpoints are known.
+
 | From | To | Type | Mechanism | Evidence | Confidence | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
-| `{{M####-slug or external}}` | `{{M####-slug or external}}` | {{call|event|data|config|build|network|storage|test|runtime}} | {{how — e.g., "registers route", "publishes to channel", "writes to table X"}} | `{{path}}:{{lines}}` | {{confidence}} | {{notes}} |
+| `{{M####-slug or external label}}` | `{{M####-slug or external label}}` | {{call \| event_publish \| event_subscribe \| data \| config \| build \| network \| storage \| test \| runtime}} | {{how — e.g., `publish('foo')`, `on('bar')`, `app.register(...)`, `bus.emit(...)`, `child_process.spawn`, `db.query(...)` }} | `{{path}}:{{lines}}` | {{confidence}} | {{notes}} |
 
 ## Critical Flows
 
