@@ -158,7 +158,10 @@ Every wiki file is read under stress, possibly months later, by future Agents (a
 
 1. Read `references/development-protocol.md`.
 2. Load `MANIFEST.md`, `COVERAGE.md`, `RISKS.md`, the relevant module docs, and relevant interaction maps. (Do **not** load the whole `.architecture/` tree.)
-3. If no usable wiki exists for the requested area, run focused mapping for that area first (do not skip; do not bluff).
+3. If no candidate modules match the request in `MANIFEST.md`, apply the **Phase 1.5 three-scenario decision rule** (in `development-protocol.md`):
+   - **Scenario A** — `rg`/`grep` finds the feature in code but it's unmapped → SELF-HEAL, then resume.
+   - **Scenario B** — feature doesn't exist but fits the project's scope → plan as new-module development (autonomous, write the new `MODULE.md` post-implementation).
+   - **Scenario C** — feature is outside the project's scope (semantically conflicts with what `MANIFEST.md` says the project is) → pause and ask the user. This is the only autonomous-mode exception.
 4. Write a concrete execution plan under `dev-plans/YYYY-MM-DD-HHMM-<slug>.md` per `templates/dev-plan.md`.
 5. The plan names: target modules, allowed edit surface, forbidden nearby areas, expected interaction changes, self-healing triggers, verification commands.
 6. Execute the plan directly. Do not ask the user for technical confirmation.

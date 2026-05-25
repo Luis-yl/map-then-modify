@@ -59,6 +59,79 @@ Build two sets:
 
 ---
 
+## Phase 1.5 — When the request does not map to any module
+
+If Phase 1 returns **no candidate modules** in `MANIFEST.md` for the request, **do not** proceed to Phase 2 and **do not** ask the user "where is this in the code?". Instead, classify which of three scenarios applies:
+
+### Scenario A — Feature exists in code but is missing from the wiki
+
+**Signal**: The request mentions a concept that plausibly exists. A targeted `rg`/`grep` over the codebase for the concept's keywords finds matching code.
+
+**Procedure**:
+1. Run targeted discovery: `rg -i '<keyword1>|<keyword2>'`, `rg -l '<function_or_type_pattern>'`, follow imports.
+2. Trigger **SELF-HEALING** (`references/self-healing-protocol.md`) on the discovered area:
+   - Classify what was missed (new leaf module / child of existing module / interaction edge / etc.).
+   - Write or update `modules/M####-<slug>.md` for the affected area.
+   - Update `MANIFEST.md` (Module Tree, Module Index, Concern Index), `COVERAGE.md`, `interactions/*.md`.
+   - Write a `self-healing/YYYY-MM-DD-HHMM-<slug>.md` report.
+3. Inform the user in 1–2 sentences ("Discovered `<concept>` lives in `<file>` (was unmapped). Added M####-<slug> to the wiki. Continuing.").
+4. Resume Phase 1 with the now-updated wiki. Then continue to Phase 2.
+
+### Scenario B — Feature does not exist; the request is to build it
+
+**Signal**: Targeted discovery finds **no** matching code, but the concept is semantically coherent with the project's scope (per `MANIFEST.md`'s Module Tree and Concern Index — the project is the kind of project where this feature *would* fit).
+
+**Procedure**:
+1. Confirm the concept does not exist by:
+   - `rg -i` with multiple keyword variants — empty.
+   - Checking `inventories/external-interfaces.md` and `inventories/entrypoints.md` — no related entry.
+2. Decide architectural placement of the new feature:
+   - **Standalone new module**: the feature has a distinct responsibility — plan a new `M####-<slug>`. Reserve its ID in `.meta/progress.json`'s `next_id`.
+   - **Extension of an existing module**: the feature is an additional capability of an existing module — extend that module's owned ranges in its `code_map` post-implementation.
+3. Continue to Phase 2 with the chosen placement.
+4. In Phase 3 (dev plan), the **Allowed Edit Surface** will include "new file(s)" rows (for new modules) or extended ranges of existing modules. The **Target Modules** table will mark the new module as `M####-<slug>` (proposed).
+5. In Phase 8 (post-implementation), creating `modules/M####-<slug>.md` (full doc per `templates/module.md`) and updating `MANIFEST.md` is **mandatory** — not optional.
+
+This is not self-healing — there is nothing to "heal" because no code exists yet. This is normal development that happens to create a new module.
+
+### Scenario C — Request is outside the project's scope
+
+**Signal**: Targeted discovery finds nothing AND the concept is semantically incompatible with the project's scope (e.g., user asks for "PoW difficulty tuning" in a project whose `MANIFEST.md` lists only PoS consensus modules; user asks for "GraphQL endpoint" in a project that has no HTTP server at all).
+
+**Procedure**:
+1. **Pause** development. Do not write a dev plan.
+2. Tell the user concretely what you found (or didn't find) and why the request seems mismatched. Cite specific modules from `MANIFEST.md` that establish the project's scope.
+3. Offer 2–3 concrete reformulations using `AskUserQuestion`:
+   - The closest semantic equivalent within the project's actual scope.
+   - A clarification of intent ("did you mean X?").
+   - A literal interpretation that would require massive new infrastructure ("strictly building this would require adding modules A, B, C — confirm you want that scope?").
+4. Wait for the user's answer. Then re-enter Phase 0 with the resolved request.
+
+This is the only branch from Phase 1.5 that **blocks on the user**. Scenarios A and B are autonomous.
+
+### Decision rule (summary)
+
+```
+no MANIFEST hit
+    │
+    ▼
+targeted rg / grep for the concept
+    │
+    ├── finds code               →  Scenario A: SELF-HEAL, resume
+    │
+    └── finds nothing
+         │
+         ├── concept fits project →  Scenario B: new-module dev, autonomous
+         │     scope
+         │
+         └── concept conflicts    →  Scenario C: pause + ask user
+               with project scope
+```
+
+**Do not** collapse B and C. New-feature work in B is autonomous (the user wants it built). C must pause because the request is likely a misunderstanding and proceeding would burn time on the wrong target.
+
+---
+
 ## Phase 2 — Focused refresh
 
 Before planning edits:
