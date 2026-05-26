@@ -1,6 +1,8 @@
 # map-then-modify
 
-A Claude Code skill for safely taking over a large, unfamiliar codebase (e.g. a complex blockchain project) and doing secondary development without accidentally breaking modules you didn't know existed.
+An **agent skill** for safely taking over a large, unfamiliar codebase (e.g. a complex blockchain project) and doing secondary development without accidentally breaking modules you didn't know existed.
+
+Works with any agent platform that supports the [skills convention](https://github.com/anthropics/skills) — Claude Code, Codex CLI, Cursor, GitHub Copilot, Gemini CLI, OpenCode, Cline, and others. The protocol is platform-agnostic: it's a directory of `SKILL.md` + `references/` + `templates/` that any conformant agent loads and follows.
 
 ## What it does
 
@@ -26,16 +28,29 @@ The fix is **map before you modify**, with:
 
 ## Install
 
-Clone into `~/.claude/skills/` so Claude Code can discover it:
+Clone the repo into your agent's skills directory. The exact path varies by platform; pick whichever matches your setup:
+
+| Platform | Skills directory |
+|---|---|
+| Claude Code | `~/.claude/skills/` |
+| Codex CLI | `~/.codex/skills/` |
+| Cursor / VS Code with Copilot | `.cursor/skills/` or `.copilot/skills/` per project |
+| Gemini CLI | `~/.gemini/skills/` |
+| OpenCode / Cline / others | follow each platform's skills-loader convention |
 
 ```bash
-mkdir -p ~/.claude/skills
-git clone git@gitee.com:liub-my/map-then-modify.git ~/.claude/skills/map-then-modify
+# Replace <skills-dir> with your platform's directory from the table above
+mkdir -p <skills-dir>
+git clone git@github.com:Luis-yl/map-then-modify.git <skills-dir>/map-then-modify
 ```
 
-(Or: clone anywhere, symlink to `~/.claude/skills/map-then-modify`.)
+Or clone anywhere convenient and symlink:
 
-Restart any active Claude Code session. The skill will appear in the available-skills list.
+```bash
+ln -s /path/to/your/clone <skills-dir>/map-then-modify
+```
+
+Restart your agent session. The skill should appear in the available-skills list.
 
 ## Trigger
 
