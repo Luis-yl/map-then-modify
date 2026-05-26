@@ -582,6 +582,142 @@
       color: var(--text);
     }
 
+    /* ===== Usage / best-practice path ===== */
+    .usage-steps {
+      display: grid;
+      gap: 1.25rem;
+      margin-top: 2.5rem;
+    }
+    .usage-step {
+      display: grid;
+      grid-template-columns: 48px 1fr;
+      gap: 1.25rem;
+      padding: 1.75rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      background: var(--bg);
+      transition: border-color 200ms ease, background 200ms ease;
+    }
+    .usage-step:hover {
+      border-color: var(--text);
+      background: var(--bg-soft);
+    }
+    .usage-num {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--text);
+      color: var(--bg);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-mono);
+      font-size: 0.95rem;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+    .usage-body {
+      min-width: 0;
+    }
+    .usage-headline {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin: 0 0 0.5rem;
+      letter-spacing: -0.01em;
+      color: var(--text);
+    }
+    .usage-lead {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      line-height: 1.55;
+      margin: 0 0 0.85rem;
+    }
+    .usage-say {
+      background: var(--bg-soft);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      padding: 0.85rem 1.1rem;
+      margin: 0.85rem 0;
+      border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    }
+    .usage-step:hover .usage-say {
+      background: var(--bg);
+    }
+    .usage-say-label {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-subtle);
+      display: block;
+      margin-bottom: 0.4rem;
+      font-weight: 500;
+    }
+    .usage-say-line {
+      display: block;
+      font-family: var(--font-mono);
+      font-size: 0.9rem;
+      color: var(--text);
+      line-height: 1.6;
+      padding: 0.1rem 0;
+    }
+    .usage-say-line::before {
+      content: '> ';
+      color: var(--accent);
+      font-weight: 600;
+    }
+    .usage-then {
+      margin-top: 0.85rem;
+      padding-left: 1.05rem;
+      border-left: 2px solid var(--border-strong);
+    }
+    .usage-then-label {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-subtle);
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+    }
+    .usage-then ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .usage-then li {
+      font-size: 0.92rem;
+      color: var(--text);
+      line-height: 1.55;
+      padding: 0.18rem 0;
+      display: flex;
+      gap: 0.55rem;
+      align-items: flex-start;
+    }
+    .usage-then li::before {
+      content: '→';
+      color: var(--accent);
+      flex-shrink: 0;
+      font-family: var(--font-mono);
+      font-weight: 500;
+    }
+    .usage-then li code {
+      background: var(--bg);
+      padding: 0.05rem 0.35rem;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-size: 0.85em;
+    }
+    @media (max-width: 640px) {
+      .usage-step {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+        padding: 1.5rem;
+      }
+    }
+
     /* ===== Final CTA ===== */
     .final-cta {
       text-align: center;
@@ -667,6 +803,7 @@
           <a class="nav-link" href="#problem" data-i18n="nav.why">Why</a>
           <a class="nav-link" href="#how" data-i18n="nav.how">How</a>
           <a class="nav-link" href="#install" data-i18n="nav.install">Install</a>
+          <a class="nav-link" href="#usage" data-i18n="nav.usage">Usage</a>
           <div class="lang-switcher" role="group" aria-label="Language switcher">
             <button type="button" class="lang-btn" data-lang="en" aria-label="English">EN</button>
             <button type="button" class="lang-btn" data-lang="zh" aria-label="中文">中文</button>
@@ -895,6 +1032,83 @@
       </div>
     </section>
 
+    <!-- ============ USAGE / BEST-PRACTICE PATH ============ -->
+    <section class="block" id="usage">
+      <div class="container-narrow">
+        <div class="eyebrow" data-i18n="usage.eyebrow">Usage</div>
+        <h2 class="section-title" data-i18n="usage.title">Three steps to go from zero to safe AI refactors.</h2>
+        <p class="section-lead" data-i18n="usage.lead">
+          Install once. Map once per project. Then keep telling your AI what to build — it stays inside the lines.
+        </p>
+
+        <div class="usage-steps">
+          <article class="usage-step">
+            <span class="usage-num" aria-hidden="true">1</span>
+            <div class="usage-body">
+              <h3 class="usage-headline" data-i18n="usage.s1.title">Install the skill</h3>
+              <p class="usage-lead" data-i18n="usage.s1.lead">
+                Clone the repo into your agent's skills directory and restart the agent. Full per-platform paths in the install section above.
+              </p>
+              <div class="usage-then">
+                <span class="usage-then-label" data-i18n="usage.outcome.label">What happens</span>
+                <ul>
+                  <li><span data-i18n-html="usage.s1.r1">The skill appears in your agent's available-skills list — no API key, no extra setup.</span></li>
+                </ul>
+              </div>
+            </div>
+          </article>
+
+          <article class="usage-step">
+            <span class="usage-num" aria-hidden="true">2</span>
+            <div class="usage-body">
+              <h3 class="usage-headline" data-i18n="usage.s2.title">Map the codebase (once per project)</h3>
+              <p class="usage-lead" data-i18n="usage.s2.lead">
+                Open your agent at the project root. Then say something like this and let it run:
+              </p>
+              <div class="usage-say">
+                <span class="usage-say-label" data-i18n="usage.say.label">Say to your agent</span>
+                <span class="usage-say-line" data-i18n="usage.s2.line1">啃下这个项目</span>
+                <span class="usage-say-line" data-i18n="usage.s2.line2">map this codebase</span>
+                <span class="usage-say-line" data-i18n="usage.s2.line3">分析这个仓库的架构</span>
+              </div>
+              <div class="usage-then">
+                <span class="usage-then-label" data-i18n="usage.outcome.label">What happens</span>
+                <ul>
+                  <li><span data-i18n-html="usage.s2.r1">The skill auto-triggers MAPPING mode and runs anywhere from ~30 min (small repo) to a few hours (100k+ LOC).</span></li>
+                  <li><span data-i18n-html="usage.s2.r2">Output lands at <code>&lt;repo&gt;/.architecture/</code> — module docs, interaction maps, risks, coverage. Commit it to git.</span></li>
+                  <li><span data-i18n-html="usage.s2.r3">When it finishes, the agent gives you a short summary: how many modules, top risks, what's next.</span></li>
+                </ul>
+              </div>
+            </div>
+          </article>
+
+          <article class="usage-step">
+            <span class="usage-num" aria-hidden="true">3</span>
+            <div class="usage-body">
+              <h3 class="usage-headline" data-i18n="usage.s3.title">Ask for changes, every time</h3>
+              <p class="usage-lead" data-i18n="usage.s3.lead">
+                After mapping is done, you can ask your AI for any code change. The skill auto-detects the wiki exists and switches into DEVELOPMENT mode. No special incantation needed.
+              </p>
+              <div class="usage-say">
+                <span class="usage-say-label" data-i18n="usage.say.label">Say to your agent</span>
+                <span class="usage-say-line" data-i18n="usage.s3.line1">给登录接口加 brute-force 防护</span>
+                <span class="usage-say-line" data-i18n="usage.s3.line2">把 admin 后台改成只允许 IP 白名单</span>
+                <span class="usage-say-line" data-i18n="usage.s3.line3">add a /health endpoint that reports DB latency</span>
+              </div>
+              <div class="usage-then">
+                <span class="usage-then-label" data-i18n="usage.outcome.label">What happens</span>
+                <ul>
+                  <li><span data-i18n-html="usage.s3.r1">The agent writes a dev plan first under <code>.architecture/dev-plans/</code> — listing the files and lines it will edit, AND which nearby code it explicitly will not touch.</span></li>
+                  <li><span data-i18n-html="usage.s3.r2">Edits stay inside the plan. If reality diverges, the wiki self-heals first and the plan expands transparently.</span></li>
+                  <li><span data-i18n-html="usage.s3.r3">When done, the agent syncs the wiki, runs the tests, and reports back — including any new risks it discovered.</span></li>
+                </ul>
+              </div>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
     <!-- ============ FINAL CTA ============ -->
     <section class="final-cta">
       <div class="container-narrow">
@@ -940,6 +1154,7 @@
         'nav.why': 'Why',
         'nav.how': 'How',
         'nav.install': 'Install',
+        'nav.usage': 'Usage',
         'nav.github': 'GitHub',
 
         'hero.badge': 'v1.0.0 · MIT · open source',
@@ -989,6 +1204,31 @@
         'install.table.others.dir': "follow each platform's skills-loader convention",
         'install.note2': 'Once installed, just tell your agent: <em>"map this project"</em> — or any wording like <em>"啃下这个项目"</em>, <em>"safe refactor in an unfamiliar repo"</em>. The skill auto-triggers.',
 
+        'usage.eyebrow': 'Usage',
+        'usage.title': 'Three steps to go from zero to safe AI refactors.',
+        'usage.lead': 'Install once. Map once per project. Then keep telling your AI what to build — it stays inside the lines.',
+        'usage.say.label': 'Say to your agent',
+        'usage.outcome.label': 'What happens',
+        'usage.s1.title': 'Install the skill',
+        'usage.s1.lead': "Clone the repo into your agent's skills directory and restart the agent. Full per-platform paths in the install section above.",
+        'usage.s1.r1': "The skill appears in your agent's available-skills list — no API key, no extra setup.",
+        'usage.s2.title': 'Map the codebase (once per project)',
+        'usage.s2.lead': 'Open your agent at the project root. Then say something like this and let it run:',
+        'usage.s2.line1': 'map this codebase',
+        'usage.s2.line2': 'analyze this repo architecture',
+        'usage.s2.line3': 'safe refactor in an unfamiliar repo',
+        'usage.s2.r1': 'The skill auto-triggers MAPPING mode and runs anywhere from ~30 min (small repo) to a few hours (100k+ LOC).',
+        'usage.s2.r2': 'Output lands at <code>&lt;repo&gt;/.architecture/</code> — module docs, interaction maps, risks, coverage. Commit it to git.',
+        'usage.s2.r3': "When it finishes, the agent gives you a short summary: how many modules, top risks, what's next.",
+        'usage.s3.title': 'Ask for changes, every time',
+        'usage.s3.lead': 'After mapping is done, you can ask your AI for any code change. The skill auto-detects the wiki exists and switches into DEVELOPMENT mode. No special incantation needed.',
+        'usage.s3.line1': 'add brute-force protection on the login endpoint',
+        'usage.s3.line2': 'lock the admin panel down to an IP allowlist',
+        'usage.s3.line3': 'add a /health endpoint that reports DB latency',
+        'usage.s3.r1': 'The agent writes a dev plan first under <code>.architecture/dev-plans/</code> — listing the files and lines it will edit, AND which nearby code it explicitly will not touch.',
+        'usage.s3.r2': 'Edits stay inside the plan. If reality diverges, the wiki self-heals first and the plan expands transparently.',
+        'usage.s3.r3': 'When done, the agent syncs the wiki, runs the tests, and reports back — including any new risks it discovered.',
+
         'cta.title': 'Stop guessing. Start mapping.',
         'cta.body': "It's free, open-source, and works with the agent you already use.",
         'cta.primary': 'View on GitHub',
@@ -1002,6 +1242,7 @@
         'nav.why': '为何',
         'nav.how': '如何',
         'nav.install': '安装',
+        'nav.usage': '上手',
         'nav.github': 'GitHub',
 
         'hero.badge': 'v1.0.0 · MIT · 开源',
@@ -1050,6 +1291,31 @@
         'install.table.others': 'OpenCode / Cline / 其它',
         'install.table.others.dir': '按各平台的 skills 加载约定',
         'install.note2': '装好后，直接告诉 agent：<em>"帮我建这个项目的地图"</em>——或者 <em>"啃下这个项目"</em>、<em>"在陌生仓库做安全重构"</em>。skill 会自动触发。',
+
+        'usage.eyebrow': '上手路径',
+        'usage.title': '三步走，AI 安全二开。',
+        'usage.lead': '装一次。每个项目建一次图。之后随便让 AI 改代码——它都不会越线。',
+        'usage.say.label': '对 agent 说',
+        'usage.outcome.label': '会发生什么',
+        'usage.s1.title': '安装 skill',
+        'usage.s1.lead': '把仓库克隆到 agent 的 skills 目录，重启 agent。详细路径见上方 Install 段。',
+        'usage.s1.r1': 'skill 出现在 agent 的可用列表里——不需要 API key、不需要额外配置。',
+        'usage.s2.title': '给项目建图（每个项目一次）',
+        'usage.s2.lead': '在项目根目录打开 agent，然后说类似下面这种话，让它自己跑：',
+        'usage.s2.line1': '啃下这个项目',
+        'usage.s2.line2': '分析这个仓库的架构',
+        'usage.s2.line3': '在陌生仓库做安全重构',
+        'usage.s2.r1': 'skill 自动进入 MAPPING 模式，小项目约 30 分钟，10 万行以上 1–3 小时。',
+        'usage.s2.r2': '产物落在 <code>&lt;repo&gt;/.architecture/</code>——模块文档、交互图、风险、覆盖。提交进 git。',
+        'usage.s2.r3': '跑完会给你一个简短报告：多少模块、最关键的风险、下一步建议。',
+        'usage.s3.title': '之后想改啥就让它改',
+        'usage.s3.lead': '建图完成后，任何代码改动需求直接说就行。skill 检测到 wiki 存在，自动进入 DEVELOPMENT 模式，不用记什么咒语。',
+        'usage.s3.line1': '给登录接口加 brute-force 防护',
+        'usage.s3.line2': '把 admin 后台改成只允许 IP 白名单',
+        'usage.s3.line3': '加一个 /health 接口，返回数据库延迟',
+        'usage.s3.r1': 'agent 先在 <code>.architecture/dev-plans/</code> 写一份开发计划——列出要改的文件和行号，以及附近哪些代码坚决不动。',
+        'usage.s3.r2': '改动严格在计划内。如果撞到 wiki 没记的代码，wiki 先自愈，计划透明地扩展。',
+        'usage.s3.r3': '完成后 agent 同步 wiki、跑测试、汇报——包括它在改的过程中发现的新风险。',
 
         'cta.title': '别再瞎猜，先建图。',
         'cta.body': '免费开源，适配你已在用的 agent。',
