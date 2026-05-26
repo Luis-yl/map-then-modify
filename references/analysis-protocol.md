@@ -584,15 +584,89 @@ When the analysis makes a judgment call that is not obvious — splitting a modu
 
 ## Subagent strategy
 
-For non-trivial repos, **dispatch each top-level (round-2) module to a dedicated Agent subagent in parallel**. Rules:
+For non-trivial repos, **parallel subagent dispatch is the default**, not an optional optimization. A purely-sequential MAPPING run on a 50k+ LOC repo is wasteful and may not finish in a session window. The protocol's correctness assumes parallelism; the orchestrator's job is to coordinate it safely.
 
-- Give each subagent: SKILL.md content (or at minimum the principles) + this protocol + `references/boundary-and-evidence-rules.md` + `templates/module.md` + `preflight.json` + its assigned subtree path + its assigned ID range (e.g. `M0010-M0019`).
-- Subagents must **not** edit source code.
-- Subagents must **not** write to `.architecture/` directly. They return: proposed module structure (IDs + slugs + hypothesized children), evidence collected, code-map drafts, risks/unknowns found.
-- The orchestrator (you) owns final `.architecture/` writes — this prevents parallel writes from clobbering shared files like `MANIFEST.md`, `COVERAGE.md`, `RISKS.md`.
-- Do not let parallel subagents work on overlapping subtrees.
+### What subagents can and cannot write (refined)
 
-For smaller repos, do everything in one session.
+The old "subagents must not write to `.architecture/` directly" was overly broad and caused serial bottlenecking. The refined rule is **per-file-owner**:
+
+**Subagents MAY write directly to per-leaf, non-conflicting files:**
+
+- `modules/M####-<slug>.md` — exactly ONE writer subagent per file, by assignment. No two subagents share a leaf.
+- `.architecture/.meta/cross-checks/M####-<slug>.review.json` — exactly ONE reviewer subagent per file, by assignment.
+- `decisions/<YYYY-MM-DD-HHMM>-<slug>.md` — only the subagent that made the decision writes it.
+
+The orchestrator assigns these files at dispatch time; no two subagents are ever told to write the same path. There is no "merge conflict" because there is no shared file.
+
+**Subagents MUST NOT write to shared / global / index files:**
+
+- `MANIFEST.md` (concurrent writes corrupt the tree)
+- `COVERAGE.md` (aggregation owned by orchestrator)
+- `RISKS.md` (aggregation owned by orchestrator; subagent contributions flow through their MODULE.md `## Unknowns And Risks` section)
+- `README.md` (single coherent author)
+- `.meta/progress.json` (orchestrator-only)
+- `.meta/preflight.json` (orchestrator-only, written once)
+- `interactions/*.md` (Phase 5 stitching aggregates across modules)
+- `inventories/*.md` (Phase 2.5 — each inventory file is owned by one subagent though)
+
+If a subagent has findings that need to land in a shared file, it RETURNS them in its report; the orchestrator integrates.
+
+**Subagents MUST NOT edit source code.** Their job is read + report.
+
+### Phase-by-phase parallelism opportunities
+
+Use this table to plan dispatch — not "is parallelism appropriate?" but "which sub-tasks can run together?":
+
+| Phase | Parallel unit | Notes |
+|---|---|---|
+| 0 (state) | sequential | one orchestrator decision |
+| 1 (census) | up to 4 parallel: read top-level docs / map tree shape / build LOC stats / mine git log | each subagent returns structured data, orchestrator assembles `preflight.json` |
+| 1.4 (initial RISKS) | sequential | orchestrator-only (writes shared file) |
+| 2a (top-level cut) | sequential | one orchestrator decision; produces decision record + initial MANIFEST tree row |
+| 2b (full tree planning) | parallel by top-level module — N subagents (one per round-2 module), each explores its subtree and proposes child IDs | orchestrator merges proposals into MANIFEST tree |
+| 2.5 (inventories) | parallel — 4 subagents (entrypoints / tests / external-interfaces / generated-and-vendor), each writes its own inventory file | inventories are 4 separate files, no overlap |
+| 3 (leaf-criteria verification) | parallel by top-level module — N subagents | each validates its own subtree's leaf candidates |
+| 4.1 (writer) + 4.2 (reviewer) | **parallel pair per leaf**: writer and reviewer dispatched **simultaneously** for the same leaf | reviewer is told "do NOT read modules/M####.md even if it appears on disk" — temporal racing handled by explicit instruction |
+| 4 across leaves | parallel — multiple `(writer + reviewer)` pairs at once | concurrency budget below |
+| 4.3 (reconcile) | orchestrator-only, sequential per leaf | after both writer and reviewer for a given leaf complete |
+| 4.4 (quality gate) | mechanical check, can run in parallel across leaves but is cheap so sequence is fine | orchestrator |
+| 5 (interactions) | parallel — 4 subagents (runtime / data-flow / build-and-config / external-boundaries), each writes its own map | aggregated edges from MODULE.md docs |
+| 6.1 (forward coverage) | sequential aggregation | orchestrator |
+| 6.2 (reverse coverage) | parallel orphan triage (one subagent per orphan batch, e.g., 10 orphans per batch) | each subagent classifies its batch |
+| 7 (risk audit) | sequential aggregation | orchestrator scans every MODULE.md `## Unknowns And Risks` |
+
+### Concurrency budget
+
+Real-world Agent platforms have parallel-tool-call limits. Use these defaults:
+
+- **N = number of round-2 top-level modules** as the unit of parallel dispatch for tree-shaped phases (2b, 3, writer pass).
+- For Phase 4 (writer + reviewer pairs), launch **up to 8 pairs concurrently** (i.e., 16 simultaneous subagents). If the platform supports fewer, throttle to platform limit. If more, raising the cap is OK but the orchestrator's reconcile (4.3) becomes the next bottleneck.
+- For Phase 2.5 (inventories) and Phase 5 (interactions), launch all 4 subagents at once — small and bounded.
+- For Phase 6.2 (orphan triage), batch orphans 10 per subagent; cap at 8 concurrent batches.
+
+### Subagent dispatch payload (what each gets)
+
+Every subagent dispatch includes:
+- The principles in SKILL.md (or full SKILL.md content).
+- The relevant `references/*.md` file(s) for its phase.
+- The relevant `templates/*.md` file(s) for its output.
+- `preflight.json` (so it knows project context).
+- Its **assignment**: subtree path, ID range, file(s) to write, what NOT to read (critically: for reviewer subagents, "do not read modules/M####-<slug>.md").
+- The orchestrator's coordination promises: "you own writes to {these files}; you do not write to {these shared files}; report your findings for shared files in the return."
+
+### Writer / reviewer isolation under parallel dispatch
+
+Phase 4.1 (writer) and 4.2 (reviewer) for the SAME leaf can race. The orchestrator's job:
+
+1. Dispatch both at the same time, both told the same source-of-truth (file paths, ID, planned scope).
+2. **Reviewer** receives explicit instruction: `do NOT read modules/M####-<slug>.md, even if it appears on disk during your run. Produce your claims from source code only.` This is the isolation contract.
+3. Writer writes to `modules/M####-<slug>.md` (with DRAFT sentinel). Reviewer writes to `.meta/cross-checks/M####-<slug>.review.json`.
+4. Orchestrator waits for both. Then runs Phase 4.3 reconcile on that leaf.
+5. Reconcile is per-leaf, so leaves can run independent (writer+reviewer+reconcile) pipelines.
+
+The isolation is enforced by **explicit instruction**, not by timing. If the reviewer obeyed the instruction, the order of writer-completion vs reviewer-start doesn't matter.
+
+For smaller repos (say, < 5k LOC, < 10 leaves), do everything in one session — the parallelism overhead exceeds the savings.
 
 ### Deferred items pattern
 
