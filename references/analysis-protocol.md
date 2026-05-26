@@ -150,12 +150,21 @@ After your first cut, audit against these two boundaries. They are **failure det
 
 Both extremes are signals to re-examine, not to mechanically merge or split. A tiny utility legitimately has 3 modules. A kubernetes-scale monorepo legitimately has 30+. The criteria above govern; these rails only flag when you may have applied them lazily.
 
-**Common domain patterns** (use as hints, not as a checklist):
+**Common domain patterns** (use as hints, not as a checklist; deeper per-domain guidance lives in `references/domain-heuristics/`):
 
-- **Blockchain node**: consensus, p2p, mempool, state/storage, RPC/API, crypto primitives, VM / contract execution, sync, wallet/keys, observability, governance.
-- **Smart contract project**: token logic, access control, governance, treasury, oracle integration, upgrade proxy, ABI bindings, deploy scripts, fork tests.
-- **Web app / SaaS**: routing, auth, persistence, business domain modules, integrations, UI, jobs, observability.
-- **Library/SDK**: public API surface, internal core, transport, codec/serialization, retries, types/models.
+- **Blockchain node**: consensus, p2p, mempool, state/storage, RPC/API, crypto primitives, VM / contract execution, sync, wallet/keys, observability, governance. → See `references/domain-heuristics/blockchain-node.md` for typical modules, boundary pitfalls, and risk hotspots.
+- **Smart contract project**: token logic, access control, governance, treasury, oracle integration, upgrade proxy, ABI bindings, deploy scripts, fork tests. → See `references/domain-heuristics/smart-contract.md`.
+- **Web app / SaaS**: routing, auth, persistence, business domain modules, integrations, UI, jobs, observability. → See `references/domain-heuristics/web-saas.md`.
+- **Library/SDK**: public API surface, internal core, transport, codec/serialization, retries, types/models. → See `references/domain-heuristics/library-sdk.md`.
+- **CLI tool**: command parser, commands, config, runtime context, output, state, integrations. → See `references/domain-heuristics/cli-tool.md`.
+
+### Domain heuristic loading
+
+After Phase 0/1 preflight completes, check `preflight.json` against the loading rules in `references/domain-heuristics/README.md` ("When to load") and read the matching file(s) for any domain(s) that apply.
+
+Heuristic files are **references for comparison**, not templates to copy. For every typical top-level module listed in the heuristic, ask "does this project have this responsibility, and have I captured it?". For every top-level module YOU propose that the heuristic does NOT list, justify it briefly in the top-level decision record. This forces non-standard cuts to be deliberate, not accidental.
+
+A project matching NO heuristic file (research code, ML pipeline, mobile app, embedded firmware, game engine, etc.) — do not invent a heuristic. Use the Phase 2a criteria directly. Note the missing heuristic in `progress.json.next_frontier` as a candidate for the library to grow.
 
 Each top-level module starts as `status: hypothesis` with `confidence: low` until code evidence is gathered. Assign stable IDs at this point (`M0001-<slug>`, `M0002-<slug>`, …). `M0000-root` is the conceptual root.
 
