@@ -2,6 +2,8 @@
 
 An **agent skill** for safely taking over a large, unfamiliar codebase (e.g. a complex blockchain project) and doing secondary development without accidentally breaking modules you didn't know existed.
 
+**Website:** https://map-then-modify.luis-675.workers.dev/
+
 Works with any agent platform that supports the [skills convention](https://github.com/anthropics/skills) — Claude Code, Codex CLI, Cursor, GitHub Copilot, Gemini CLI, OpenCode, Cline, and others. The protocol is platform-agnostic: it's a directory of `SKILL.md` + `references/` + `templates/` that any conformant agent loads and follows.
 
 ## What it does
