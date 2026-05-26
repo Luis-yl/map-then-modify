@@ -93,10 +93,6 @@ references/
 templates/                                # 11 templates for every artifact under .architecture/
 ```
 
-## Status
-
-Initial release. Built via Claude + codex red-team / blue-team review.
-
 ## License
 
 MIT.
