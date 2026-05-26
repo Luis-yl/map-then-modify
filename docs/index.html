@@ -142,7 +142,7 @@
     .nav-links {
       display: inline-flex;
       align-items: center;
-      gap: 1.5rem;
+      gap: 1.25rem;
     }
     .nav-link {
       font-size: 0.9rem;
@@ -151,6 +151,40 @@
     }
     .nav-link:hover {
       color: var(--text);
+    }
+    .lang-switcher {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.15rem;
+      padding: 0.2rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: var(--bg);
+      font-family: var(--font-mono);
+      font-size: 0.74rem;
+    }
+    .lang-btn {
+      background: transparent;
+      border: none;
+      padding: 0.25rem 0.6rem;
+      border-radius: var(--radius-sm);
+      color: var(--text-subtle);
+      cursor: pointer;
+      font-family: var(--font-mono);
+      font-size: 0.74rem;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      transition: background 180ms ease, color 180ms ease;
+    }
+    .lang-btn:hover {
+      color: var(--text);
+    }
+    .lang-btn.active {
+      background: var(--text);
+      color: var(--bg);
+    }
+    @media (max-width: 640px) {
+      .nav-links .nav-link { display: none; }
     }
     .nav-github {
       display: inline-flex;
@@ -630,14 +664,18 @@
           map-then-modify
         </a>
         <div class="nav-links">
-          <a class="nav-link" href="#problem">Why</a>
-          <a class="nav-link" href="#how">How</a>
-          <a class="nav-link" href="#install">Install</a>
+          <a class="nav-link" href="#problem" data-i18n="nav.why">Why</a>
+          <a class="nav-link" href="#how" data-i18n="nav.how">How</a>
+          <a class="nav-link" href="#install" data-i18n="nav.install">Install</a>
+          <div class="lang-switcher" role="group" aria-label="Language switcher">
+            <button type="button" class="lang-btn" data-lang="en" aria-label="English">EN</button>
+            <button type="button" class="lang-btn" data-lang="zh" aria-label="中文">中文</button>
+          </div>
           <a class="nav-github" href="https://github.com/Luis-yl/map-then-modify" target="_blank" rel="noopener noreferrer">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
               <path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.36-3.88-1.36-.52-1.33-1.27-1.68-1.27-1.68-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.02 1.76 2.69 1.25 3.35.96.1-.75.4-1.25.73-1.54-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.28 1.18-3.08-.12-.29-.51-1.46.11-3.04 0 0 .96-.31 3.15 1.18.91-.25 1.89-.38 2.86-.38s1.95.13 2.86.38c2.18-1.49 3.14-1.18 3.14-1.18.62 1.58.23 2.75.11 3.04.74.8 1.18 1.82 1.18 3.08 0 4.42-2.69 5.39-5.26 5.68.41.36.78 1.07.78 2.16v3.2c0 .31.21.67.8.56C20.71 21.39 24 17.08 24 12 24 5.65 18.85.5 12.5.5H12z"/>
             </svg>
-            GitHub
+            <span data-i18n="nav.github">GitHub</span>
           </a>
         </div>
       </nav>
@@ -651,21 +689,21 @@
       <div class="container">
         <div class="badge">
           <span class="badge-dot" aria-hidden="true"></span>
-          v1.0.0 · MIT · open source
+          <span data-i18n="hero.badge">v1.0.0 · MIT · open source</span>
         </div>
-        <h1 class="hero-title">Map before you modify.</h1>
-        <p class="hero-sub">
+        <h1 class="hero-title" data-i18n="hero.title">Map before you modify.</h1>
+        <p class="hero-sub" data-i18n="hero.sub">
           An open-source agent skill that gives AI a precise map of your codebase — so it can refactor and extend without breaking what it doesn't understand.
         </p>
         <div class="hero-cta">
           <a class="btn btn-primary" href="#install">
-            Get started
+            <span data-i18n="hero.cta.primary">Get started</span>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <line x1="5" y1="12" x2="19" y2="12"></line>
               <polyline points="12 5 19 12 12 19"></polyline>
             </svg>
           </a>
-          <a class="btn btn-secondary" href="https://github.com/Luis-yl/map-then-modify" target="_blank" rel="noopener noreferrer">
+          <a class="btn btn-secondary" href="https://github.com/Luis-yl/map-then-modify" target="_blank" rel="noopener noreferrer" data-i18n="hero.cta.secondary">
             View on GitHub
           </a>
         </div>
@@ -675,7 +713,7 @@
               <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
               <polyline points="22 4 12 14.01 9 11.01"></polyline>
             </svg>
-            Works with Claude Code, Codex, Cursor, Copilot, Gemini CLI
+            <span data-i18n="hero.meta">Works with Claude Code, Codex, Cursor, Copilot, Gemini CLI</span>
           </span>
         </div>
       </div>
@@ -684,28 +722,28 @@
     <!-- ============ PROBLEM ============ -->
     <section class="block" id="problem">
       <div class="container-narrow">
-        <div class="eyebrow">The problem</div>
-        <h2 class="section-title">A codebase you didn't write, an AI you can't fully trust.</h2>
-        <p class="section-lead">
+        <div class="eyebrow" data-i18n="problem.eyebrow">The problem</div>
+        <h2 class="section-title" data-i18n="problem.title">A codebase you didn't write, an AI you can't fully trust.</h2>
+        <p class="section-lead" data-i18n="problem.lead">
           You inherit a 200k-line project. You ask an AI to add one feature. It does — but the next deploy breaks something you never asked it to touch. Sound familiar?
         </p>
 
         <div class="story" role="group" aria-label="Failure scenario">
           <div class="story-line">
             <span class="story-num" aria-hidden="true">1</span>
-            <span>A client hands you <strong>200,000 lines of code</strong> you've never read.</span>
+            <span data-i18n-html="problem.s1">A client hands you <strong>200,000 lines of code</strong> you've never read.</span>
           </div>
           <div class="story-line">
             <span class="story-num" aria-hidden="true">2</span>
-            <span>You ask an AI to make <strong>a small change</strong> in one module.</span>
+            <span data-i18n-html="problem.s2">You ask an AI to make <strong>a small change</strong> in one module.</span>
           </div>
           <div class="story-line">
             <span class="story-num" aria-hidden="true">3</span>
-            <span>The AI silently edits a shared utility you didn't know existed.</span>
+            <span data-i18n="problem.s3">The AI silently edits a shared utility you didn't know existed.</span>
           </div>
           <div class="story-line bad">
             <span class="story-num" aria-hidden="true">4</span>
-            <span><strong>Three modules break.</strong> No one notices until staging. Or worse — until production.</span>
+            <span data-i18n-html="problem.s4"><strong>Three modules break.</strong> No one notices until staging. Or worse — until production.</span>
           </div>
         </div>
       </div>
@@ -714,9 +752,9 @@
     <!-- ============ SOLUTION / HOW ============ -->
     <section class="block" id="how">
       <div class="container">
-        <div class="eyebrow">The fix</div>
-        <h2 class="section-title">Map first. Then modify — only inside the lines.</h2>
-        <p class="section-lead">
+        <div class="eyebrow" data-i18n="how.eyebrow">The fix</div>
+        <h2 class="section-title" data-i18n="how.title">Map first. Then modify — only inside the lines.</h2>
+        <p class="section-lead" data-i18n-html="how.lead">
           map-then-modify is a protocol your AI follows. It produces a <strong>complete architectural map</strong> of your codebase, then enforces precise boundaries every time it changes code.
         </p>
 
@@ -729,9 +767,9 @@
                 <line x1="16" y1="6" x2="16" y2="22"></line>
               </svg>
             </span>
-            <div class="step-title">step 01 · map</div>
-            <h3 class="step-headline">Build a map of the whole codebase.</h3>
-            <p class="step-body">
+            <div class="step-title" data-i18n="how.s1.tag">step 01 · map</div>
+            <h3 class="step-headline" data-i18n="how.s1.headline">Build a map of the whole codebase.</h3>
+            <p class="step-body" data-i18n-html="how.s1.body">
               A recursive analysis produces an <code>.architecture/</code> wiki — stable module IDs, precise file and line boundaries, interaction edges, risks, and confidence ratings on every claim.
             </p>
           </article>
@@ -745,9 +783,9 @@
                 <line x1="9" y1="17" x2="15" y2="17"></line>
               </svg>
             </span>
-            <div class="step-title">step 02 · plan</div>
-            <h3 class="step-headline">Declare boundaries before touching code.</h3>
-            <p class="step-body">
+            <div class="step-title" data-i18n="how.s2.tag">step 02 · plan</div>
+            <h3 class="step-headline" data-i18n="how.s2.headline">Declare boundaries before touching code.</h3>
+            <p class="step-body" data-i18n="how.s2.body">
               Every change starts with a written dev plan. The AI lists which files and lines it will edit — and which it explicitly will not. No silent surprises.
             </p>
           </article>
@@ -759,9 +797,9 @@
                 <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
               </svg>
             </span>
-            <div class="step-title">step 03 · modify</div>
-            <h3 class="step-headline">Edits stay strictly inside the plan.</h3>
-            <p class="step-body">
+            <div class="step-title" data-i18n="how.s3.tag">step 03 · modify</div>
+            <h3 class="step-headline" data-i18n="how.s3.headline">Edits stay strictly inside the plan.</h3>
+            <p class="step-body" data-i18n="how.s3.body">
               If reality diverges from the map mid-edit, the wiki self-heals first, the plan expands transparently, and the change continues — without ever breaking what isn't documented.
             </p>
           </article>
@@ -774,7 +812,7 @@
                 <polyline points="20 6 9 17 4 12"></polyline>
               </svg>
             </span>
-            <span class="outcome-text">No more silent regressions in modules nobody told the AI to change.</span>
+            <span class="outcome-text" data-i18n="how.o1">No more silent regressions in modules nobody told the AI to change.</span>
           </div>
           <div class="outcome">
             <span class="outcome-check" aria-hidden="true">
@@ -782,7 +820,7 @@
                 <polyline points="20 6 9 17 4 12"></polyline>
               </svg>
             </span>
-            <span class="outcome-text">The map keeps up with the code on every successful change.</span>
+            <span class="outcome-text" data-i18n="how.o2">The map keeps up with the code on every successful change.</span>
           </div>
           <div class="outcome">
             <span class="outcome-check" aria-hidden="true">
@@ -790,7 +828,7 @@
                 <polyline points="20 6 9 17 4 12"></polyline>
               </svg>
             </span>
-            <span class="outcome-text">Risks, gotchas, and dead code surface early — never quietly.</span>
+            <span class="outcome-text" data-i18n="how.o3">Risks, gotchas, and dead code surface early — never quietly.</span>
           </div>
           <div class="outcome">
             <span class="outcome-check" aria-hidden="true">
@@ -798,7 +836,7 @@
                 <polyline points="20 6 9 17 4 12"></polyline>
               </svg>
             </span>
-            <span class="outcome-text">You stay in the loop — the AI tells you what it healed and why.</span>
+            <span class="outcome-text" data-i18n="how.o4">You stay in the loop — the AI tells you what it healed and why.</span>
           </div>
         </div>
       </div>
@@ -807,27 +845,27 @@
     <!-- ============ INSTALL ============ -->
     <section class="block" id="install">
       <div class="container-narrow">
-        <div class="eyebrow">Install</div>
-        <h2 class="section-title">One command. Any agent platform.</h2>
-        <p class="section-lead">
+        <div class="eyebrow" data-i18n="install.eyebrow">Install</div>
+        <h2 class="section-title" data-i18n="install.title">One command. Any agent platform.</h2>
+        <p class="section-lead" data-i18n="install.lead">
           Clone the repo into your agent's skills directory. Restart your agent. That's it.
         </p>
 
         <div class="code-block" aria-label="Install command">
-          <button class="copy-btn" type="button" id="copy-btn" aria-label="Copy install command">copy</button>
-          <span class="c-comment"># pick the skills directory for your agent (see table below)</span><br>
+          <button class="copy-btn" type="button" id="copy-btn" data-i18n="install.copy" aria-label="Copy install command">copy</button>
+          <span class="c-comment" data-i18n="install.code-comment"># pick the skills directory for your agent (see table below)</span><br>
           <span class="c-accent">git clone</span> git@github.com:Luis-yl/map-then-modify.git \<br>
           &nbsp;&nbsp;&nbsp;&nbsp;~/.claude/skills/map-then-modify
         </div>
 
-        <p class="install-note">
+        <p class="install-note" data-i18n-html="install.note1">
           Don't use Claude Code? Replace <code>~/.claude/skills/</code> with whichever skills directory your agent uses.
         </p>
 
         <div class="platforms" role="table" aria-label="Per-platform skills directories">
           <div class="platforms-row head" role="row">
-            <div class="p-name" role="columnheader">Platform</div>
-            <div class="p-path" role="columnheader">Skills directory</div>
+            <div class="p-name" role="columnheader" data-i18n="install.table.platform">Platform</div>
+            <div class="p-path" role="columnheader" data-i18n="install.table.dir">Skills directory</div>
           </div>
           <div class="platforms-row" role="row">
             <div class="p-name" role="cell">Claude Code</div>
@@ -838,20 +876,20 @@
             <div class="p-path" role="cell">~/.codex/skills/</div>
           </div>
           <div class="platforms-row" role="row">
-            <div class="p-name" role="cell">Cursor / VS Code with Copilot</div>
-            <div class="p-path" role="cell">.cursor/skills/ or .copilot/skills/</div>
+            <div class="p-name" role="cell" data-i18n="install.table.cursor">Cursor / VS Code with Copilot</div>
+            <div class="p-path" role="cell" data-i18n="install.table.cursor.dir">.cursor/skills/ or .copilot/skills/</div>
           </div>
           <div class="platforms-row" role="row">
             <div class="p-name" role="cell">Gemini CLI</div>
             <div class="p-path" role="cell">~/.gemini/skills/</div>
           </div>
           <div class="platforms-row" role="row">
-            <div class="p-name" role="cell">OpenCode / Cline / others</div>
-            <div class="p-path" role="cell">follow each platform's skills-loader convention</div>
+            <div class="p-name" role="cell" data-i18n="install.table.others">OpenCode / Cline / others</div>
+            <div class="p-path" role="cell" data-i18n="install.table.others.dir">follow each platform's skills-loader convention</div>
           </div>
         </div>
 
-        <p class="install-note">
+        <p class="install-note" data-i18n-html="install.note2">
           Once installed, just tell your agent: <em>"map this project"</em> — or any wording like <em>"啃下这个项目"</em>, <em>"safe refactor in an unfamiliar repo"</em>. The skill auto-triggers.
         </p>
       </div>
@@ -860,16 +898,16 @@
     <!-- ============ FINAL CTA ============ -->
     <section class="final-cta">
       <div class="container-narrow">
-        <h2>Stop guessing. Start mapping.</h2>
-        <p>It's free, open-source, and works with the agent you already use.</p>
+        <h2 data-i18n="cta.title">Stop guessing. Start mapping.</h2>
+        <p data-i18n="cta.body">It's free, open-source, and works with the agent you already use.</p>
         <div class="hero-cta" style="justify-content:center;">
           <a class="btn btn-primary" href="https://github.com/Luis-yl/map-then-modify" target="_blank" rel="noopener noreferrer">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
               <path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.36-3.88-1.36-.52-1.33-1.27-1.68-1.27-1.68-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.02 1.76 2.69 1.25 3.35.96.1-.75.4-1.25.73-1.54-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.28 1.18-3.08-.12-.29-.51-1.46.11-3.04 0 0 .96-.31 3.15 1.18.91-.25 1.89-.38 2.86-.38s1.95.13 2.86.38c2.18-1.49 3.14-1.18 3.14-1.18.62 1.58.23 2.75.11 3.04.74.8 1.18 1.82 1.18 3.08 0 4.42-2.69 5.39-5.26 5.68.41.36.78 1.07.78 2.16v3.2c0 .31.21.67.8.56C20.71 21.39 24 17.08 24 12 24 5.65 18.85.5 12.5.5H12z"/>
             </svg>
-            View on GitHub
+            <span data-i18n="cta.primary">View on GitHub</span>
           </a>
-          <a class="btn btn-secondary" href="#install">
+          <a class="btn btn-secondary" href="#install" data-i18n="cta.secondary">
             How to install
           </a>
         </div>
@@ -887,16 +925,204 @@
           map-then-modify · v1.0.0
         </div>
         <div class="footer-right">
-          <a href="https://github.com/Luis-yl/map-then-modify" target="_blank" rel="noopener noreferrer">GitHub</a>
-          <a href="https://github.com/Luis-yl/map-then-modify/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">MIT License</a>
-          <a href="https://github.com/Luis-yl/map-then-modify/releases" target="_blank" rel="noopener noreferrer">Releases</a>
+          <a href="https://github.com/Luis-yl/map-then-modify" target="_blank" rel="noopener noreferrer" data-i18n="footer.github">GitHub</a>
+          <a href="https://github.com/Luis-yl/map-then-modify/blob/main/LICENSE" target="_blank" rel="noopener noreferrer" data-i18n="footer.license">MIT License</a>
+          <a href="https://github.com/Luis-yl/map-then-modify/releases" target="_blank" rel="noopener noreferrer" data-i18n="footer.releases">Releases</a>
         </div>
       </div>
     </div>
   </footer>
 
   <script>
-    // Copy install command to clipboard
+    // ===== i18n =====
+    var translations = {
+      en: {
+        'nav.why': 'Why',
+        'nav.how': 'How',
+        'nav.install': 'Install',
+        'nav.github': 'GitHub',
+
+        'hero.badge': 'v1.0.0 · MIT · open source',
+        'hero.title': 'Map before you modify.',
+        'hero.sub': "An open-source agent skill that gives AI a precise map of your codebase — so it can refactor and extend without breaking what it doesn't understand.",
+        'hero.cta.primary': 'Get started',
+        'hero.cta.secondary': 'View on GitHub',
+        'hero.meta': 'Works with Claude Code, Codex, Cursor, Copilot, Gemini CLI',
+
+        'problem.eyebrow': 'The problem',
+        'problem.title': "A codebase you didn't write, an AI you can't fully trust.",
+        'problem.lead': 'You inherit a 200k-line project. You ask an AI to add one feature. It does — but the next deploy breaks something you never asked it to touch. Sound familiar?',
+        'problem.s1': 'A client hands you <strong>200,000 lines of code</strong> you\'ve never read.',
+        'problem.s2': 'You ask an AI to make <strong>a small change</strong> in one module.',
+        'problem.s3': "The AI silently edits a shared utility you didn't know existed.",
+        'problem.s4': '<strong>Three modules break.</strong> No one notices until staging. Or worse — until production.',
+
+        'how.eyebrow': 'The fix',
+        'how.title': 'Map first. Then modify — only inside the lines.',
+        'how.lead': 'map-then-modify is a protocol your AI follows. It produces a <strong>complete architectural map</strong> of your codebase, then enforces precise boundaries every time it changes code.',
+        'how.s1.tag': 'step 01 · map',
+        'how.s1.headline': 'Build a map of the whole codebase.',
+        'how.s1.body': 'A recursive analysis produces an <code>.architecture/</code> wiki — stable module IDs, precise file and line boundaries, interaction edges, risks, and confidence ratings on every claim.',
+        'how.s2.tag': 'step 02 · plan',
+        'how.s2.headline': 'Declare boundaries before touching code.',
+        'how.s2.body': 'Every change starts with a written dev plan. The AI lists which files and lines it will edit — and which it explicitly will not. No silent surprises.',
+        'how.s3.tag': 'step 03 · modify',
+        'how.s3.headline': 'Edits stay strictly inside the plan.',
+        'how.s3.body': 'If reality diverges from the map mid-edit, the wiki self-heals first, the plan expands transparently, and the change continues — without ever breaking what isn\'t documented.',
+        'how.o1': 'No more silent regressions in modules nobody told the AI to change.',
+        'how.o2': 'The map keeps up with the code on every successful change.',
+        'how.o3': 'Risks, gotchas, and dead code surface early — never quietly.',
+        'how.o4': 'You stay in the loop — the AI tells you what it healed and why.',
+
+        'install.eyebrow': 'Install',
+        'install.title': 'One command. Any agent platform.',
+        'install.lead': "Clone the repo into your agent's skills directory. Restart your agent. That's it.",
+        'install.copy': 'copy',
+        'install.copied': 'copied',
+        'install.code-comment': '# pick the skills directory for your agent (see table below)',
+        'install.note1': "Don't use Claude Code? Replace <code>~/.claude/skills/</code> with whichever skills directory your agent uses.",
+        'install.table.platform': 'Platform',
+        'install.table.dir': 'Skills directory',
+        'install.table.cursor': 'Cursor / VS Code with Copilot',
+        'install.table.cursor.dir': '.cursor/skills/ or .copilot/skills/',
+        'install.table.others': 'OpenCode / Cline / others',
+        'install.table.others.dir': "follow each platform's skills-loader convention",
+        'install.note2': 'Once installed, just tell your agent: <em>"map this project"</em> — or any wording like <em>"啃下这个项目"</em>, <em>"safe refactor in an unfamiliar repo"</em>. The skill auto-triggers.',
+
+        'cta.title': 'Stop guessing. Start mapping.',
+        'cta.body': "It's free, open-source, and works with the agent you already use.",
+        'cta.primary': 'View on GitHub',
+        'cta.secondary': 'How to install',
+
+        'footer.github': 'GitHub',
+        'footer.license': 'MIT License',
+        'footer.releases': 'Releases'
+      },
+      zh: {
+        'nav.why': '为何',
+        'nav.how': '如何',
+        'nav.install': '安装',
+        'nav.github': 'GitHub',
+
+        'hero.badge': 'v1.0.0 · MIT · 开源',
+        'hero.title': '先建图，再修改。',
+        'hero.sub': '一个开源 agent skill：为 AI 生成你代码库的精确地图，让它在重构和扩展时——不再碰它不理解的部分。',
+        'hero.cta.primary': '开始使用',
+        'hero.cta.secondary': '在 GitHub 查看',
+        'hero.meta': '适配 Claude Code、Codex、Cursor、Copilot、Gemini CLI',
+
+        'problem.eyebrow': '问题',
+        'problem.title': '一个不是你写的代码库，一个你无法完全信任的 AI。',
+        'problem.lead': '你接手一个 20 万行代码的项目。你让 AI 加一个功能。它做完了——但下次发布时，某个你压根没让它碰的地方突然崩了。熟悉吗？',
+        'problem.s1': '客户甩给你 <strong>20 万行</strong>你从未读过的代码。',
+        'problem.s2': '你让 AI 在某个模块里改<strong>一个小地方</strong>。',
+        'problem.s3': 'AI 顺手改了一个你不知道存在的共享工具函数。',
+        'problem.s4': '<strong>三个模块崩了。</strong>直到 staging 才有人发现——或者更糟，直到生产环境。',
+
+        'how.eyebrow': '解决方案',
+        'how.title': '先建图。再改动——只在画好的边界内。',
+        'how.lead': 'map-then-modify 是 AI 要遵循的一套协议。它先为你的代码库生成<strong>完整架构地图</strong>，然后在每次改动时强制 AI 留在精确边界内。',
+        'how.s1.tag': '步骤 01 · 建图',
+        'how.s1.headline': '为整个代码库建一份地图。',
+        'how.s1.body': '递归分析产出 <code>.architecture/</code> wiki——稳定的模块 ID、精确的文件与行号边界、模块间交互、风险，以及每条声明的置信度。',
+        'how.s2.tag': '步骤 02 · 规划',
+        'how.s2.headline': '动代码前，先划清边界。',
+        'how.s2.body': '每次改动都从一份开发计划开始。AI 明确列出要编辑哪些文件和行——以及哪些坚决不动。不再有意外。',
+        'how.s3.tag': '步骤 03 · 修改',
+        'how.s3.headline': '改动严格停留在计划内。',
+        'how.s3.body': '如果改的过程中现实和地图不一致，wiki 先自愈，计划透明扩展，改动继续——绝不破坏未记录的部分。',
+        'how.o1': '不再有那种没人让 AI 碰、却悄悄出错的模块。',
+        'how.o2': '地图随每次成功改动同步更新。',
+        'how.o3': '风险、坑点、死代码——早暴露，不藏着掖着。',
+        'how.o4': '你始终知情——AI 会告诉你它修了什么、为什么。',
+
+        'install.eyebrow': '安装',
+        'install.title': '一行命令，任何 agent 平台。',
+        'install.lead': '把仓库克隆到你 agent 的 skills 目录。重启 agent。完事。',
+        'install.copy': '复制',
+        'install.copied': '已复制',
+        'install.code-comment': '# 选择你 agent 对应的 skills 目录（见下方表格）',
+        'install.note1': '不用 Claude Code？把 <code>~/.claude/skills/</code> 换成你 agent 的 skills 目录。',
+        'install.table.platform': '平台',
+        'install.table.dir': 'Skills 目录',
+        'install.table.cursor': 'Cursor / VS Code + Copilot',
+        'install.table.cursor.dir': '.cursor/skills/ 或 .copilot/skills/',
+        'install.table.others': 'OpenCode / Cline / 其它',
+        'install.table.others.dir': '按各平台的 skills 加载约定',
+        'install.note2': '装好后，直接告诉 agent：<em>"帮我建这个项目的地图"</em>——或者 <em>"啃下这个项目"</em>、<em>"在陌生仓库做安全重构"</em>。skill 会自动触发。',
+
+        'cta.title': '别再瞎猜，先建图。',
+        'cta.body': '免费开源，适配你已在用的 agent。',
+        'cta.primary': '在 GitHub 查看',
+        'cta.secondary': '如何安装',
+
+        'footer.github': 'GitHub',
+        'footer.license': 'MIT 协议',
+        'footer.releases': '发布记录'
+      }
+    };
+
+    var STORAGE_KEY = 'mtm-lang';
+
+    function detectLang() {
+      try {
+        var saved = localStorage.getItem(STORAGE_KEY);
+        if (saved === 'en' || saved === 'zh') return saved;
+      } catch (e) {}
+      var nav = (navigator.language || navigator.userLanguage || 'en').toLowerCase();
+      if (nav.indexOf('zh') === 0) return 'zh';
+      return 'en';
+    }
+
+    function applyLang(lang) {
+      if (!translations[lang]) lang = 'en';
+      var dict = translations[lang];
+
+      document.documentElement.setAttribute('lang', lang === 'zh' ? 'zh-CN' : 'en');
+
+      // text-only
+      var nodes = document.querySelectorAll('[data-i18n]');
+      for (var i = 0; i < nodes.length; i++) {
+        var key = nodes[i].getAttribute('data-i18n');
+        if (dict[key] != null) nodes[i].textContent = dict[key];
+      }
+
+      // HTML-allowed (uses innerHTML so <strong>, <em>, <code> survive)
+      var nodesHTML = document.querySelectorAll('[data-i18n-html]');
+      for (var j = 0; j < nodesHTML.length; j++) {
+        var keyH = nodesHTML[j].getAttribute('data-i18n-html');
+        if (dict[keyH] != null) nodesHTML[j].innerHTML = dict[keyH];
+      }
+
+      // language switcher active state
+      var btns = document.querySelectorAll('.lang-btn');
+      for (var k = 0; k < btns.length; k++) {
+        btns[k].classList.toggle('active', btns[k].getAttribute('data-lang') === lang);
+        btns[k].setAttribute('aria-pressed', btns[k].getAttribute('data-lang') === lang ? 'true' : 'false');
+      }
+
+      // expose current lang so copy-button can use the right "copied" label
+      window.__mtmLang = lang;
+    }
+
+    function setLang(lang) {
+      try { localStorage.setItem(STORAGE_KEY, lang); } catch (e) {}
+      applyLang(lang);
+    }
+
+    // wire switcher buttons
+    document.addEventListener('DOMContentLoaded', function () {
+      var btns = document.querySelectorAll('.lang-btn');
+      for (var i = 0; i < btns.length; i++) {
+        btns[i].addEventListener('click', function (e) {
+          var lang = e.currentTarget.getAttribute('data-lang');
+          setLang(lang);
+        });
+      }
+      applyLang(detectLang());
+    });
+
+    // ===== Copy install command =====
     (function () {
       var btn = document.getElementById('copy-btn');
       if (!btn) return;
@@ -905,15 +1131,16 @@
       btn.addEventListener('click', function () {
         try {
           navigator.clipboard.writeText(cmd).then(function () {
-            btn.textContent = 'copied';
+            var lang = window.__mtmLang || 'en';
+            btn.textContent = translations[lang]['install.copied'] || 'copied';
             btn.classList.add('copied');
             setTimeout(function () {
-              btn.textContent = 'copy';
+              btn.textContent = translations[lang]['install.copy'] || 'copy';
               btn.classList.remove('copied');
             }, 1500);
           });
         } catch (e) {
-          // fallback: do nothing fancy, user can select+copy manually
+          // fallback: user can select+copy manually
         }
       });
     })();
