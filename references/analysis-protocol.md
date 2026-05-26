@@ -402,6 +402,54 @@ This rate is a project-wide quality indicator over time.
 
 Cross-check roughly doubles per-leaf token cost. It is mandatory by default — but if a user explicitly opts for `mapping-speed-over-accuracy` mode (recorded in `preflight.json.mapping_mode: "speed"`), the reviewer pass may be skipped for leaves whose risk indicators are all low (no money, no auth, no consensus, no irreversible state, no security boundary). High-risk leaves (consensus, auth, payment, persistence, crypto, public API) always cross-check regardless of mode.
 
+### Phase 4.4 — Quality Gate (per-leaf scorecard before sentinel)
+
+After reconciliation (4.3) and before flipping DRAFT → END-OF-MODULE, every leaf doc passes through a deterministic Quality Gate scorecard. The Gate is a mechanical check, not a judgment call — its rules are listed below so they are reproducible across runs.
+
+The Gate guards against doc-writer "looks complete but is hollow" failures: every section has prose but the prose is vague, evidence is missing, anchors are placeholders, Modification Guide is generic, etc. Mechanical scoring forces a minimum bar before the leaf is considered complete.
+
+#### Scoring rules
+
+For a leaf doc, compute:
+
+| Check | Pass rule | Weight |
+|---|---|---|
+| Frontmatter completeness | `id`, `title`, `parent`, `status`, `leaf`, `confidence`, `last_verified`, `last_verified_sha` all present and non-empty | hard fail if missing |
+| Code Map anchors | every `code_map` row has a non-empty `anchor` (symbol / route / section / config-key / test name) | hard fail if any row missing |
+| Code Map evidence | every `code_map` row's `file` exists on disk; line range parses; anchor is grep-able in the file | hard fail if any row's anchor cannot be found |
+| Inbound coverage | `Inbound Interactions` table has ≥1 row OR the doc explicitly notes "no inbound — this is an entrypoint" with evidence | hard fail otherwise |
+| Outbound coverage | `Outbound Interactions` has ≥1 row OR explicit "no outbound — leaf utility/data module" with reason | hard fail otherwise |
+| Public Surface specificity | every `Public Surface` row has a concrete `signature` / `shape` value (not just `{{shape}}` / "see code" / empty) | hard fail if any row vague |
+| Invariants evidence | every Invariants bullet either cites a file:line, a test name, a config key, or is marked `(judgment, not enforced)` — vague bullets like "should be fast" fail | hard fail per offending bullet |
+| Failure Modes coverage | Failure Modes table has ≥1 row with non-empty `Cause` AND non-empty `Handling` AND `Evidence` | hard fail if all rows empty handling |
+| Tests And Verification | at least one row OR explicit `_(none — recorded as risk R####)_` with the R#### appearing in RISKS.md | hard fail if absent and not recorded as risk |
+| Modification Guide three-bucket fill | all three buckets (Safe / Requires self-healing first / Avoid) have ≥1 concrete entry; "no items" is allowed only with one-line reason | hard fail otherwise |
+| Leaf Certificate | all 10 checkboxes ticked for `leaf: true` | hard fail if any unchecked |
+| Evidence Log | ≥1 row per the 5 mandatory claim types (responsibility, inbound, outbound, invariant, failure mode) | hard fail otherwise |
+| Cross-check reference | doc cites the cross-check artifact path in Evidence Log | hard fail if absent |
+| END-OF-MODULE sentinel | trailing comment present, no DRAFT remaining | hard fail otherwise |
+
+Each row is **pass / fail**. There is no partial credit, no aggregate score that lets a doc squeak by — every check is a hard gate. A doc with even one hard fail is "not gate-passing" and the writer must remediate.
+
+#### Remediation procedure
+
+1. Orchestrator runs the Gate (mechanical, no LLM judgment for the rules above).
+2. For each failing check, emit a specific, actionable directive (e.g., "Code Map row 3 has anchor `{{symbol_or_anchor}}` — replace with the real symbol name found in `path/to/file.ext:N`").
+3. Send the directives back to the writer subagent (same one that produced the draft) along with the cross-check artifact, asking for a targeted patch — NOT a full rewrite.
+4. Re-run the Gate. If any check still fails after 3 rounds, escalate: mark the leaf `confidence: low`, add an `R####` to RISKS.md describing the persistent quality failure, and finalize anyway (so the wiki is not blocked forever). The persistent failure is itself a project risk worth surfacing.
+
+#### Cost note
+
+Quality Gate is cheap (the rules are mechanical, no semantic LLM judgment for pass/fail). Remediation rounds can be expensive on bad drafts. Empirically, most leaves pass on round 1 if Phase 4.1 followed the template; round 2 fixes are usually anchor placeholders and missing Evidence Log rows. Round 3+ failures indicate either a bad subagent or a genuinely under-specified module — escalation is correct.
+
+#### What Quality Gate does NOT check
+
+- Whether Summary is "good prose" — that is the writer's craft, not gate-able mechanically.
+- Whether Invariants are "true" — only that they cite evidence. Truth verification is the reviewer's job in 4.2, not the Gate's.
+- Whether Modification Guide gives "good advice" — only that it is filled with concrete entries.
+
+The Gate's purpose is to refuse hollow docs, not to second-guess judgment. Combined with the cross-check (4.2/4.3) and reverse coverage (6.2), the three together cover: missing structural facts (4.2), structural disagreement (4.3), doc hollowness (4.4), and orphaned source files (6.2).
+
 ---
 
 ## Phase 5 — Interaction stitching
