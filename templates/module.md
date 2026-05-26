@@ -182,5 +182,9 @@ Examples (replace with your module's actual gotchas):
 | --- | --- |
 | {{claim}} | `{{path}}:{{lines}}` (+ context: symbol / test / config / command output) |
 
-<!-- END OF MODULE DOC — do not remove. Used by the resume protocol to detect partial writes. A MODULE.md missing this trailing line is treated as interrupted-mid-write and must be rewritten from scratch. -->
+<!-- END OF MODULE DOC — do not remove. Used by the resume protocol to detect partial writes. A MODULE.md missing this trailing line is treated as interrupted-mid-write and must be rewritten from scratch.
+
+LIFECYCLE: for LEAF modules, this sentinel is set only after Phase 4.3 reconciliation completes. During Phase 4.1/4.2 (writer + reviewer passes), the file ends with `<!-- DRAFT — pending cross-check -->` instead. The DRAFT sentinel is also treated as interrupted by the resume protocol (same recovery: rewrite from scratch).
+
+NON-LEAF modules go directly from write to END-OF-MODULE — they do not have Phase 4.2/4.3 (they delegate structural fields to children). -->
 

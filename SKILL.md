@@ -161,7 +161,7 @@ Every wiki file is read under stress, possibly months later, by future Agents (a
 5. **Phase 2b** — full tree planning to leaf level. Assign every stable ID before writing any per-module doc content. MANIFEST `Module Tree` is complete after this phase.
 6. **Phase 2.5** — write the 4 inventories under `inventories/`. Inventory rows cite stable IDs from MANIFEST.
 7. **Phase 3** — leaf-criteria verification. For each leaf candidate, confirm all leaf criteria hold; if any fails, return to Phase 2b and subdivide.
-8. **Phase 4** — fill module docs: **non-leaves first** (establish module-wide invariants), **then leaves** (reference parent invariants by ID). Every `modules/M*.md` ends with the END-OF-MODULE sentinel.
+8. **Phase 4** — fill module docs: **non-leaves first** (establish module-wide invariants), **then leaves** (reference parent invariants by ID). Every leaf goes through the three-pass lifecycle: **4.1 writer** (writes draft ending with DRAFT sentinel) → **4.2 reviewer** (independent subagent re-derives structural fields from source, NOT reading the draft) → **4.3 reconcile** (orchestrator diffs claims, marks agreed rows `confidence: high`, re-verifies writer-only rows, adds genuine reviewer-only rows, finalizes with END-OF-MODULE sentinel). Non-leaves skip 4.2/4.3 (they delegate structural fields to children).
 9. **Phase 5** — stitch global interaction maps under `interactions/`.
 10. **Phase 6/7** — audit coverage → write `COVERAGE.md`. Audit risks → finalize `RISKS.md` (aggregate from each MODULE.md `## Unknowns And Risks`).
 11. **Phase 7 end** — write `.architecture/README.md`; write `.architecture/.meta/progress.json` as a one-shot completion snapshot; finalize `analysis-runs/<...>.md` with the `Finished:` timestamp.

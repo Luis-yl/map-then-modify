@@ -327,6 +327,81 @@ Within each batch, parallel subagents per top-level subtree are appropriate (see
 
 Every `modules/M*.md` MUST end with the END-OF-MODULE sentinel (the trailing HTML comment in `templates/module.md`). A file lacking the sentinel is treated as interrupted-mid-write by the resume protocol — it will be rewritten from scratch on the next session. Do not skip the sentinel because a file "looks complete enough".
 
+While a leaf is in cross-check (Phase 4.2/4.3), the file ends with the temporary DRAFT sentinel (`<!-- DRAFT — pending cross-check -->`). The DRAFT sentinel is replaced with the END-OF-MODULE sentinel only after Phase 4.3 reconciliation completes. A file ending in DRAFT is also treated as interrupted by the resume protocol — same recovery (rewrite from scratch).
+
+### Phase 4 leaf-doc lifecycle (three-pass writer / reviewer / reconcile)
+
+To raise structural accuracy and reduce missed inbound/outbound edges, every **leaf** module doc goes through three passes. Non-leaf docs skip Phase 4.2/4.3 (they delegate to children for the structural fields that are cross-checked).
+
+#### Phase 4.1 — Writer pass (the existing doc-writing step)
+
+A subagent reads the source code for the leaf's planned scope and produces a full `modules/M####-<slug>.md` per `templates/module.md`. The writer subagent ends the file with the temporary DRAFT sentinel (`<!-- DRAFT — pending cross-check -->`), NOT the END-OF-MODULE sentinel.
+
+The writer is told its draft will be cross-checked — this prevents "fast and loose" writing.
+
+#### Phase 4.2 — Reviewer pass (independent re-derivation)
+
+A different subagent (the "reviewer") is dispatched for the same leaf module. Critical isolation rule:
+
+- The reviewer is given: the module's planned scope from MANIFEST (file paths + responsibility), source-code access, and the four standard inventories.
+- The reviewer is **NOT** given the writer's draft. **It must not read `modules/M####-<slug>.md`** while in this pass. The orchestrator enforces this by either not telling the reviewer the file exists, or instructing it explicitly: "do not read the existing module doc; produce yours from source-code only".
+
+The reviewer independently produces a structured JSON claim file at `.architecture/.meta/cross-checks/M####-<slug>.review.json`:
+
+```json
+{
+  "module_id": "M####-<slug>",
+  "reviewed_at": "<ISO8601>",
+  "reviewer": "<subagent identifier or 'main-agent'>",
+  "claims": {
+    "code_map": [
+      {"file": "<path>", "line_range": "<start-end or 'full'>", "anchor": "<symbol/route/section>", "role": "<what this range does>"}
+    ],
+    "inbound": [
+      {"from": "<module ID or external label>", "mechanism": "<call|event_publish|event_subscribe|data|config|build|network|storage|test|runtime>", "evidence": "<file:line>"}
+    ],
+    "outbound": [
+      {"to": "<module ID or external label>", "mechanism": "<...>", "evidence": "<file:line>"}
+    ],
+    "public_surface": [
+      {"symbol": "<name>", "kind": "<function|type|event|route|ABI>", "evidence": "<file:line>"}
+    ],
+    "state_ownership": [
+      {"data": "<name>", "access": "<read|write|emit|cache>", "evidence": "<file:line>"}
+    ]
+  },
+  "notes": "<anything the reviewer noticed but is not a structural claim — gotchas, hypotheses, doubts>"
+}
+```
+
+The reviewer cross-checks **structural fields only** — `code_map`, `inbound`, `outbound`, `public_surface`, `state_ownership`. Interpretive sections (`Summary`, `Architecture Role`, `Modification Guide`, `Gotchas`) are NOT cross-checked because their value is in the writer's judgment, not in claim/counter-claim diff.
+
+#### Phase 4.3 — Reconcile (orchestrator-driven, idempotent)
+
+The orchestrator (main agent) diffs the writer's draft against the reviewer's claims for each of the 5 structural fields. For each field, classify every row:
+
+- **Agreed** — both lists contain the same item (same file/symbol/anchor). Mark `confidence: high` for that row in the final doc.
+- **Writer-only** — writer has it, reviewer doesn't. Possible reasons: writer saw something reviewer missed (e.g., needed git log mining), OR writer hallucinated. Resolution: writer re-verifies. If writer can cite specific file:line evidence, KEEP and mark `confidence: medium` with a note "writer-only after cross-check". If writer cannot cite evidence, DROP.
+- **Reviewer-only** — reviewer found it, writer missed. Possible reasons: writer's read was incomplete, OR reviewer over-eager. Resolution: writer re-reads the cited evidence. If genuine, ADD to draft with `confidence: high`. If not, log in cross-check artifact as "rejected reviewer claim" with reason.
+
+After reconciliation, writer finalizes the doc: replace DRAFT sentinel with the END-OF-MODULE sentinel.
+
+The reconcile artifact at `.architecture/.meta/cross-checks/M####-<slug>.review.json` stays on disk as an audit trail. It is referenced from the module doc's `Evidence Log` row (e.g., `"Cross-check artifact: .architecture/.meta/cross-checks/M0017-rpc-router.review.json"`).
+
+#### Quality signal: cross-check agreement rate
+
+For each leaf doc, compute the agreement rate = `len(Agreed) / (len(Agreed) + len(Writer-only) + len(Reviewer-only))` across the five structural fields. Record in `progress.json.stats.cross_check_agreement` as an array of `{module_id, rate}` entries.
+
+- Rate ≥ 0.9 → high-quality doc
+- Rate 0.7–0.9 → acceptable, but Phase 7 risk audit should review writer-only and reviewer-only rows for the module
+- Rate < 0.7 → flag in `RISKS.md` as a low-confidence module; consider re-mapping the area
+
+This rate is a project-wide quality indicator over time.
+
+#### Cost note
+
+Cross-check roughly doubles per-leaf token cost. It is mandatory by default — but if a user explicitly opts for `mapping-speed-over-accuracy` mode (recorded in `preflight.json.mapping_mode: "speed"`), the reviewer pass may be skipped for leaves whose risk indicators are all low (no money, no auth, no consensus, no irreversible state, no security boundary). High-risk leaves (consensus, auth, payment, persistence, crypto, public API) always cross-check regardless of mode.
+
 ---
 
 ## Phase 5 — Interaction stitching
