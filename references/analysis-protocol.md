@@ -428,17 +428,49 @@ The same edge may appear in a module doc and a global map. Duplication is intent
 
 ---
 
-## Phase 6 — Coverage audit
+## Phase 6 — Coverage audit (forward classification + reverse validation)
+
+Phase 6 is a **two-pass coverage check**. Forward classification answers "given a module, what does it own?" — Reverse validation answers the harder question "given a file, who owns it?". The reverse pass is what catches "AI forgot to map an entire area" failures that the forward pass cannot see.
+
+### 6.1 Forward classification (build-up from modules)
 
 Update `.architecture/COVERAGE.md` per `templates/coverage.md`.
 
-Classify every first-party file as:
-- **covered** — owned by a documented leaf module.
+Walk every `modules/M*.md`. For each row in its `code_map`, mark the cited file as covered (with the cited line range tracked). After all module docs are walked, classify every first-party file as:
+
+- **covered** — owned by a documented leaf module, full file or with documented ranges.
 - **partially covered** — some ranges owned, others not. Document what's covered and what isn't.
 - **excluded** — generated / vendored / build artifact / binary / third-party copy. Reason required.
-- **unknown** — file exists but no module claims it. **This is a frontier**; either claim it in the next pass or record as a risk.
+- **unknown** — file exists but no module claims any range of it. **This is a frontier.**
 
 A wiki where some code is `unknown` is acceptable. A wiki that pretends all code is `covered` when it isn't is worse than useless.
+
+### 6.2 Reverse validation (top-down from filesystem)
+
+After forward classification, run reverse validation. Without this, a forgotten subdirectory or hidden subsystem stays invisible — the forward pass only finds what modules cite, never what they don't.
+
+Procedure:
+
+1. **Enumerate first-party files**: `rg --files` (gitignore-aware) → list, minus excluded paths (`generated_paths` + `vendored_paths` + `node_modules` + build artifacts from `preflight.json`).
+2. **For each file, query "which module owns me?"**:
+   - Look up the file path across every `modules/M*.md` `code_map` table.
+   - If the file appears in any module's `code_map` → owned (record which module ID).
+   - If the file does NOT appear in any `code_map` → **orphan**.
+3. **Triage orphans** — each orphan is one of:
+   - **Legitimate exclusion missed in Phase 0**: it should be in `excluded` (e.g., a `.snap` file, a fixture). Add to `excluded` and to `inventories/generated-and-vendor.md` if applicable.
+   - **Real coverage gap**: it should belong to a module but no module claimed it. **Self-heal**: trigger `references/self-healing-protocol.md` to either add the file's range to an existing module's `code_map`, or create a new module if it's a distinct responsibility.
+   - **Honest unknown**: a file whose role is genuinely unclear; record as `unknown` in COVERAGE.md AND as a row in RISKS.md (severity at least `medium` — unknown code in a project is operational risk).
+4. **For files marked `partially covered`** — list the uncovered line ranges. For non-trivial uncovered ranges (>20 lines), apply the same triage as orphans.
+
+### 6.3 Reverse validation completeness gate
+
+Phase 6 is complete only when:
+
+- Every first-party file is `covered` | `partially covered` (with explicit uncovered ranges) | `excluded` (with reason) | `unknown` (with RISKS.md entry).
+- The total number of `unknown` files is recorded in `progress.json.stats.unknown_files`.
+- The reverse-validation pass left no triage TODOs — every orphan was resolved into one of the four classifications.
+
+If the orchestrator finds it cannot resolve all orphans (e.g., too many to triage in this session), the leftover orphans MUST be recorded in `progress.json.next_frontier` with one bullet each. Mapping cannot be declared complete with un-triaged orphans.
 
 ---
 
