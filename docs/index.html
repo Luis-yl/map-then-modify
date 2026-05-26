@@ -1,11 +1,11 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="color-scheme" content="light" />
-  <title>map-then-modify — safe AI refactors on codebases you don't know</title>
-  <meta name="description" content="Open-source agent skill that gives AI a precise map of your codebase — so it can refactor and extend without breaking what it doesn't understand." />
+  <title>map-then-modify — 先建图，再改 AI 不懂的代码库</title>
+  <meta name="description" content="一个开源 agent skill：为 AI 生成你代码库的精确地图，让它在重构和扩展时不再碰它不理解的部分。" />
   <meta property="og:title" content="map-then-modify" />
   <meta property="og:description" content="Map before you modify. An open-source agent skill that stops AI from breaking unfamiliar code." />
   <meta property="og:type" content="website" />
@@ -1065,13 +1065,14 @@
     var STORAGE_KEY = 'mtm-lang';
 
     function detectLang() {
+      // Default is Chinese. User's explicit choice (saved in localStorage)
+      // overrides; browser locale is intentionally NOT used so behavior
+      // is deterministic for a global audience landing here cold.
       try {
         var saved = localStorage.getItem(STORAGE_KEY);
         if (saved === 'en' || saved === 'zh') return saved;
       } catch (e) {}
-      var nav = (navigator.language || navigator.userLanguage || 'en').toLowerCase();
-      if (nav.indexOf('zh') === 0) return 'zh';
-      return 'en';
+      return 'zh';
     }
 
     function applyLang(lang) {
