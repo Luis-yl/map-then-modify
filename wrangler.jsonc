@@ -1,0 +1,18 @@
+// Cloudflare Workers + Static Assets config for the landing page.
+// Deploys docs/ as a static site served by a Worker.
+//
+// Triggered by `npx wrangler deploy` (the default deploy command in
+// Cloudflare's unified Workers + Pages UI). Cloudflare's build runner
+// picks up this file from the repo root and serves docs/ at the
+// project's *.workers.dev URL (plus any custom domain you bind later).
+//
+// Docs: https://developers.cloudflare.com/workers/static-assets/
+{
+  "$schema": "https://unpkg.com/wrangler@latest/config-schema.json",
+  "name": "map-then-modify",
+  "compatibility_date": "2026-05-26",
+  "assets": {
+    "directory": "./docs",
+    "not_found_handling": "single-page-application"
+  }
+}
