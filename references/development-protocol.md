@@ -230,7 +230,7 @@ When any trigger fires:
 
 ---
 
-## Phase 7 — Verify
+## Phase 7 — Verify (tests + impact oracle)
 
 Run verification in layers:
 
@@ -238,6 +238,7 @@ Run verification in layers:
 2. **Affected parents** — tests for parent modules whose behavior may have changed.
 3. **Interaction-edge tests** — integration or smoke tests for changed interactions.
 4. **Broader suite** — when blast radius is high (see `boundary-and-evidence-rules.md` blast-radius rules).
+5. **Impact oracle cross-check** (when available — see below).
 
 If a verification command fails:
 - Determine whether the failure is related to the change.
@@ -245,6 +246,83 @@ If a verification command fails:
 - For unrelated environmental failures (e.g. flaky CI test unrelated to your area), record them in the dev plan's `## Open risks` and inform the user.
 
 Never mark a step complete while its verification is failing.
+
+### Phase 7.5 — Impact oracle cross-check (optional external provider)
+
+After Phase 5 edits are made (i.e., there is a real diff against the base commit) and before declaring Phase 7 verification done, run an **impact oracle** to catch callers / dependencies the dev plan may have missed. The oracle is an **independent sensor**, not a tie-breaker — its findings feed into triage, not into automatic edits.
+
+#### Provider detection
+
+The skill supports any provider that produces an impact set in the schema below. The reference provider is **Understand-Anything (UA)**: detected via `.understand-anything/knowledge-graph.json` presence and a working `/understand-diff` command. Other providers (tree-sitter scripts, LSP-based scanners, custom AST tools) can fill the same role; the protocol treats them all uniformly via a normalized JSON output.
+
+If no provider is detected, Phase 7.5 is **skipped silently** — record `impact_oracle: "none"` in the dev plan's `Execution Log` and continue. The base verification layers (1–4) remain the primary verification path.
+
+#### Provider invocation contract
+
+The provider is invoked with the current diff (staged + unstaged + new files) and must return a normalized impact set:
+
+```json
+{
+  "provider": "ua-knowledge-graph | tree-sitter-cli | lsp | custom",
+  "source_commit": "<git SHA the impact was computed against>",
+  "computed_at": "<ISO8601>",
+  "affected_nodes": [
+    {
+      "id": "<provider-native ID, e.g., function:src/foo.ts:bar>",
+      "file": "<repo-relative path>",
+      "line_range": "<start-end or 'full'>",
+      "symbol": "<symbol name if applicable>",
+      "kind": "<file | function | class | route | event | ...>",
+      "reason": "<modified | reverse-dependency | forward-dependency | test-of>"
+    }
+  ]
+}
+```
+
+Provider stdout / file path → orchestrator reads → caches at `.architecture/.meta/impact-oracle/<dev-plan-slug>.json` for audit.
+
+#### Three-way comparison (quorum)
+
+The orchestrator now has three sources for "what's affected":
+
+1. **Plan-declared** — modules in the dev plan's `Target Modules` + `Allowed Edit Surface`.
+2. **Wiki-derived** — every module whose `Inbound Interactions` or `Outbound Interactions` lists a touched file (resolved via MTM `code_map` crosswalk: `provider node file:line → MTM module ID`).
+3. **Oracle-found** — `affected_nodes` from the provider's response, resolved through the same crosswalk.
+
+Classify every affected node into one of three buckets:
+
+| Bucket | Definition | Meaning |
+|---|---|---|
+| `confirmed` | In oracle AND in wiki AND in plan | Expected impact, high confidence |
+| `wiki-only` | In wiki Inbound/Outbound but NOT in oracle | Oracle missed (likely dynamic / config / event / runtime-only), OR wiki is overstating dependency. **Do not act on this without re-inspection.** Possible self-heal candidate if oracle is right and wiki is stale. |
+| `ua-only` (or `oracle-only`) | In oracle but NOT in wiki | Either oracle false positive, OR a real caller wiki missed (cascade-damage candidate). **Always triage before acting.** |
+
+#### Triage rules for `oracle-only` (the cascade-damage probe)
+
+For each `oracle-only` node, run mechanical triage before deciding whether to self-heal:
+
+1. **Type-only import?** Resolve the node's evidence file:line. If the only reference is a `type` / `interface` import (TypeScript) or a build-time-only reference, mark `triage: type-only`, skip self-heal.
+2. **Barrel re-export?** If the file is an index/barrel that just re-exports symbols, mark `triage: barrel`, skip self-heal.
+3. **Dead code?** If the node is in a file with no inbound from any reachable entrypoint, mark `triage: unreachable`, skip self-heal but record as suspected dead code in `RISKS.md`.
+4. **Test helper?** If the node is in a test file that is not part of the project's protected behavior surface, mark `triage: test-helper`, skip self-heal.
+5. **Generated / vendored?** Check against `inventories/generated-and-vendor.md`. If yes, mark `triage: non-source`, skip self-heal (and instead address the generator if behavior actually changed).
+6. **None of the above?** This is a **real cascade-damage candidate** — mark `triage: cascade-candidate` and trigger **SELF-HEALING** (see `references/self-healing-protocol.md`). The self-heal must (a) add the missing inbound row to the wiki module that owns this caller, (b) re-evaluate whether the dev plan's Allowed Edit Surface needs to expand, and (c) re-run any verification affected by the surface change.
+
+Triage results are recorded in the cached oracle artifact under `triage_results`. The protocol does NOT skip Phase 7.5 just because triage is tedious — the triage is exactly the mechanism that turns oracle noise into actionable signal.
+
+#### What Phase 7.5 does NOT do
+
+- **It does not gate verification on oracle silence.** A green oracle (zero `oracle-only`) is good evidence, not proof. Other failure modes (dynamic dispatch, config-driven routing, event subscribers) remain invisible to static oracles. Verification layers 1–4 (the tests) remain primary.
+- **It does not automatically expand the edit surface.** Only `triage: cascade-candidate` triggers self-heal, and the self-heal goes through the normal protocol (analyze → update wiki → expand plan → resume edits).
+- **It is not a replacement for thorough Phase 1 module-doc Inbound/Outbound coverage.** A wiki-only-correct project would pass Phase 7.5 silently; a wiki-with-gaps project benefits because the oracle catches what the writer missed.
+
+#### Crosswalk reliability note
+
+The crosswalk `provider node file:line → MTM module ID` uses the wiki's `code_map` table. Failure modes (per `boundary-and-evidence-rules.md` §10):
+
+- A file may appear in multiple modules' `code_map` (range-level ownership) — resolve by line range overlap.
+- A node's call site may live in a caller function whose own line range is in module A, while the node it references is in module B — the inbound edge goes from A's perspective. The crosswalk must distinguish "where is this node" (target file:line) from "who is calling it" (caller's enclosing range).
+- Shared utility files: `coverage ≠ owner`. A util function used by 5 modules may have inbound rows in each of those modules' docs; oracle-only checks should match against any of them.
 
 ---
 

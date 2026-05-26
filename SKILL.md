@@ -181,7 +181,8 @@ Every wiki file is read under stress, possibly months later, by future Agents (a
 7. On divergence → SELF-HEALING mode, then resume.
 8. Update module docs and interaction maps if architecture behavior changed.
 9. Run targeted verification first; broader verification based on blast radius (see boundary-and-evidence rules).
-10. Final report: dev plan path, changed modules, wiki updates, verification results, remaining risks.
+10. **Phase 7.5 — Impact oracle cross-check** (optional): if an external static-analysis provider is detected (e.g., Understand-Anything's `/understand-diff`, or any tool that emits the normalized impact-set JSON), invoke it to compare against the wiki's expected impact set. Triage `oracle-only` findings through the 6-step mechanical filter (type-only / barrel / unreachable / test-helper / generated / real-cascade-candidate). Only `real-cascade-candidate` triggers SELF-HEALING. No provider detected → skip silently. **The provider is non-authoritative**: it is an independent sensor, not a tie-breaker.
+11. Final report: dev plan path, changed modules, wiki updates, verification results, oracle cross-check status (or `none`), remaining risks.
 
 ### SELF-HEALING mode (auto, inside either mode)
 
