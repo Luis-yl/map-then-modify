@@ -336,128 +336,66 @@ Within each batch, parallel subagents per top-level subtree are appropriate (see
 
 Every `modules/M*.md` MUST end with the END-OF-MODULE sentinel (the trailing HTML comment in `templates/module.md`). A file lacking the sentinel is treated as interrupted-mid-write by the resume protocol — it will be rewritten from scratch on the next session. Do not skip the sentinel because a file "looks complete enough".
 
-While a leaf is in cross-check (Phase 4.2/4.3), the file ends with the temporary DRAFT sentinel (`<!-- DRAFT — pending cross-check -->`). The DRAFT sentinel is replaced with the END-OF-MODULE sentinel only after Phase 4.3 reconciliation completes. A file ending in DRAFT is also treated as interrupted by the resume protocol — same recovery (rewrite from scratch).
+### Phase 4 leaf-doc strategy: batched writer
 
-### Phase 4 leaf-doc lifecycle (three-pass writer / reviewer / reconcile)
+For an N-leaf project (often 30–80 leaves), the protocol uses a **batched writer** model rather than one-subagent-per-leaf. The rationale comes from real-world tradeoffs: dispatching 80 separate subagents has high orchestrator-side coordination overhead; coordinating each subagent to know its narrow scope, parent invariants, and cross-references is expensive; and the cost amplifier (token budget per session, wall time, dispatch limits) blows up.
 
-To raise structural accuracy and reduce missed inbound/outbound edges, every **leaf** module doc goes through three passes. Non-leaf docs skip Phase 4.2/4.3 (they delegate to children for the structural fields that are cross-checked).
+The batched writer model:
 
-#### Phase 4.1 — Writer pass (the existing doc-writing step)
+1. **Group cohesive leaves into batches of 5–10**. Cohesion criteria (any one suffices):
+   - Same parent subtree (e.g., all hub-infra leaves: M0010–M0019)
+   - Same subsystem with shared invariants (e.g., the 7 asset family leaves M0030–M0036)
+   - Same domain workflow stage (e.g., all knowledge-ingest pipeline stages)
+2. **Dispatch one writer subagent per batch**. The writer is given: SKILL.md content, this protocol, `boundary-and-evidence-rules.md`, `templates/module.md`, `preflight.json`, the batch's leaf IDs + their planned scope from MANIFEST, the parent module's doc(s) for context, full source-code access, and the four inventories.
+3. **The writer produces all leaf docs in the batch** in one call, writing each to `modules/M####-<slug>.md` with the END-OF-MODULE sentinel.
+4. **Multiple batches run in parallel** per the concurrency budget in "Subagent strategy" below.
 
-A subagent reads the source code for the leaf's planned scope and produces a full `modules/M####-<slug>.md` per `templates/module.md`. The writer subagent ends the file with the temporary DRAFT sentinel (`<!-- DRAFT — pending cross-check -->`), NOT the END-OF-MODULE sentinel.
+This is the canonical strategy. It is not "speed mode" or a fallback — it is what the protocol expects. The earlier writer+reviewer-pair model (which appeared in prior protocol drafts) imposed coordination costs that outweighed its quality value in practice; quality is now achieved via Phase 4.4 Quality Gate + Phase 6.2 reverse coverage + Phase 7 risk aggregation working together.
 
-The writer is told its draft will be cross-checked — this prevents "fast and loose" writing.
+#### When to use a stricter pass (high-risk leaves)
 
-#### Phase 4.2 — Reviewer pass (independent re-derivation)
+Some leaves merit extra rigor — specifically those in: `auth`, `payment`, `consensus`, `crypto`, `persistence-migration`, `public-API`, `signing`, `governance`. For these, after the batched writer completes their initial doc, the orchestrator does a **read-back verification pass** itself:
 
-A different subagent (the "reviewer") is dispatched for the same leaf module. Critical isolation rule:
+1. Re-read the source files cited in the leaf's `code_map`.
+2. Spot-check each `Inbound`/`Outbound` row by `rg` against the named symbol.
+3. Verify each Invariant has an Evidence Log reference.
+4. If any check fails, dispatch a follow-up writer-patch directive (per Quality Gate remediation, below).
 
-- The reviewer is given: the module's planned scope from MANIFEST (file paths + responsibility), source-code access, and the four standard inventories.
-- The reviewer is **NOT** given the writer's draft. **It must not read `modules/M####-<slug>.md`** while in this pass. The orchestrator enforces this by either not telling the reviewer the file exists, or instructing it explicitly: "do not read the existing module doc; produce yours from source-code only".
+This stricter pass is **judgment-based**, not protocol-mandated for every leaf. The orchestrator decides per leaf based on its risk classification.
 
-The reviewer independently produces a structured JSON claim file at `.architecture/.meta/cross-checks/M####-<slug>.review.json`:
+### Phase 4.4 — Quality Gate (per-leaf scorecard, 6 essential checks)
 
-```json
-{
-  "module_id": "M####-<slug>",
-  "reviewed_at": "<ISO8601>",
-  "reviewer": "<subagent identifier or 'main-agent'>",
-  "claims": {
-    "code_map": [
-      {"file": "<path>", "line_range": "<start-end or 'full'>", "anchor": "<symbol/route/section>", "role": "<what this range does>"}
-    ],
-    "inbound": [
-      {"from": "<module ID or external label>", "mechanism": "<call|event_publish|event_subscribe|data|config|build|network|storage|test|runtime>", "evidence": "<file:line>"}
-    ],
-    "outbound": [
-      {"to": "<module ID or external label>", "mechanism": "<...>", "evidence": "<file:line>"}
-    ],
-    "public_surface": [
-      {"symbol": "<name>", "kind": "<function|type|event|route|ABI>", "evidence": "<file:line>"}
-    ],
-    "state_ownership": [
-      {"data": "<name>", "access": "<read|write|emit|cache>", "evidence": "<file:line>"}
-    ]
-  },
-  "notes": "<anything the reviewer noticed but is not a structural claim — gotchas, hypotheses, doubts>"
-}
-```
+After a leaf doc is written, before it is considered final, run a deterministic Quality Gate. The Gate guards against "filled-out but hollow" docs.
 
-The reviewer cross-checks **structural fields only** — `code_map`, `inbound`, `outbound`, `public_surface`, `state_ownership`. Interpretive sections (`Summary`, `Architecture Role`, `Modification Guide`, `Gotchas`) are NOT cross-checked because their value is in the writer's judgment, not in claim/counter-claim diff.
+#### Scoring rules (6 hard checks)
 
-#### Phase 4.3 — Reconcile (orchestrator-driven, idempotent)
+For a leaf doc, every check must pass:
 
-The orchestrator (main agent) diffs the writer's draft against the reviewer's claims for each of the 5 structural fields. For each field, classify every row:
+| Check | Pass rule |
+|---|---|
+| 1. Frontmatter completeness | `id`, `title`, `parent`, `status`, `leaf`, `confidence`, `last_verified`, `last_verified_sha` all present and non-empty |
+| 2. Code Map anchors | every `code_map` row has a non-empty `anchor` (symbol / route / section / config-key / test name) — never blank, never `{{placeholder}}` |
+| 3. Interactions ≥1+1 | `Inbound` has ≥1 row OR explicit "no inbound — this is an entrypoint" note; AND `Outbound` has ≥1 row OR explicit "no outbound — leaf utility" note |
+| 4. Modification Guide three-bucket | all three buckets (Safe / Requires self-healing first / Avoid) have ≥1 concrete entry; "no items" allowed only with one-line reason |
+| 5. Leaf Certificate ticked | all 10 checkboxes ticked (only for `leaf: true`) |
+| 6. END-OF-MODULE sentinel | trailing sentinel comment present |
 
-- **Agreed** — both lists contain the same item (same file/symbol/anchor). Mark `confidence: high` for that row in the final doc.
-- **Writer-only** — writer has it, reviewer doesn't. Possible reasons: writer saw something reviewer missed (e.g., needed git log mining), OR writer hallucinated. Resolution: writer re-verifies. If writer can cite specific file:line evidence, KEEP and mark `confidence: medium` with a note "writer-only after cross-check". If writer cannot cite evidence, DROP.
-- **Reviewer-only** — reviewer found it, writer missed. Possible reasons: writer's read was incomplete, OR reviewer over-eager. Resolution: writer re-reads the cited evidence. If genuine, ADD to draft with `confidence: high`. If not, log in cross-check artifact as "rejected reviewer claim" with reason.
-
-After reconciliation, writer finalizes the doc: replace DRAFT sentinel with the END-OF-MODULE sentinel.
-
-The reconcile artifact at `.architecture/.meta/cross-checks/M####-<slug>.review.json` stays on disk as an audit trail. It is referenced from the module doc's `Evidence Log` row (e.g., `"Cross-check artifact: .architecture/.meta/cross-checks/M0017-rpc-router.review.json"`).
-
-#### Quality signal: cross-check agreement rate
-
-For each leaf doc, compute the agreement rate = `len(Agreed) / (len(Agreed) + len(Writer-only) + len(Reviewer-only))` across the five structural fields. Record in `progress.json.stats.cross_check_agreement` as an array of `{module_id, rate}` entries.
-
-- Rate ≥ 0.9 → high-quality doc
-- Rate 0.7–0.9 → acceptable, but Phase 7 risk audit should review writer-only and reviewer-only rows for the module
-- Rate < 0.7 → flag in `RISKS.md` as a low-confidence module; consider re-mapping the area
-
-This rate is a project-wide quality indicator over time.
-
-#### Cost note
-
-Cross-check roughly doubles per-leaf token cost. It is mandatory by default — but if a user explicitly opts for `mapping-speed-over-accuracy` mode (recorded in `preflight.json.mapping_mode: "speed"`), the reviewer pass may be skipped for leaves whose risk indicators are all low (no money, no auth, no consensus, no irreversible state, no security boundary). High-risk leaves (consensus, auth, payment, persistence, crypto, public API) always cross-check regardless of mode.
-
-### Phase 4.4 — Quality Gate (per-leaf scorecard before sentinel)
-
-After reconciliation (4.3) and before flipping DRAFT → END-OF-MODULE, every leaf doc passes through a deterministic Quality Gate scorecard. The Gate is a mechanical check, not a judgment call — its rules are listed below so they are reproducible across runs.
-
-The Gate guards against doc-writer "looks complete but is hollow" failures: every section has prose but the prose is vague, evidence is missing, anchors are placeholders, Modification Guide is generic, etc. Mechanical scoring forces a minimum bar before the leaf is considered complete.
-
-#### Scoring rules
-
-For a leaf doc, compute:
-
-| Check | Pass rule | Weight |
-|---|---|---|
-| Frontmatter completeness | `id`, `title`, `parent`, `status`, `leaf`, `confidence`, `last_verified`, `last_verified_sha` all present and non-empty | hard fail if missing |
-| Code Map anchors | every `code_map` row has a non-empty `anchor` (symbol / route / section / config-key / test name) | hard fail if any row missing |
-| Code Map evidence | every `code_map` row's `file` exists on disk; line range parses; anchor is grep-able in the file | hard fail if any row's anchor cannot be found |
-| Inbound coverage | `Inbound Interactions` table has ≥1 row OR the doc explicitly notes "no inbound — this is an entrypoint" with evidence | hard fail otherwise |
-| Outbound coverage | `Outbound Interactions` has ≥1 row OR explicit "no outbound — leaf utility/data module" with reason | hard fail otherwise |
-| Public Surface specificity | every `Public Surface` row has a concrete `signature` / `shape` value (not just `{{shape}}` / "see code" / empty) | hard fail if any row vague |
-| Invariants evidence | every Invariants bullet either cites a file:line, a test name, a config key, or is marked `(judgment, not enforced)` — vague bullets like "should be fast" fail | hard fail per offending bullet |
-| Failure Modes coverage | Failure Modes table has ≥1 row with non-empty `Cause` AND non-empty `Handling` AND `Evidence` | hard fail if all rows empty handling |
-| Tests And Verification | at least one row OR explicit `_(none — recorded as risk R####)_` with the R#### appearing in RISKS.md | hard fail if absent and not recorded as risk |
-| Modification Guide three-bucket fill | all three buckets (Safe / Requires self-healing first / Avoid) have ≥1 concrete entry; "no items" is allowed only with one-line reason | hard fail otherwise |
-| Leaf Certificate | all 10 checkboxes ticked for `leaf: true` | hard fail if any unchecked |
-| Evidence Log | ≥1 row per the 5 mandatory claim types (responsibility, inbound, outbound, invariant, failure mode) | hard fail otherwise |
-| Cross-check reference | doc cites the cross-check artifact path in Evidence Log | hard fail if absent |
-| END-OF-MODULE sentinel | trailing comment present, no DRAFT remaining | hard fail otherwise |
-
-Each row is **pass / fail**. There is no partial credit, no aggregate score that lets a doc squeak by — every check is a hard gate. A doc with even one hard fail is "not gate-passing" and the writer must remediate.
+Non-leaf modules apply checks 1, 2 (relaxed: 2-column variant per template), 3, 4, and 6. The Leaf Certificate check is leaf-only.
 
 #### Remediation procedure
 
-1. Orchestrator runs the Gate (mechanical, no LLM judgment for the rules above).
-2. For each failing check, emit a specific, actionable directive (e.g., "Code Map row 3 has anchor `{{symbol_or_anchor}}` — replace with the real symbol name found in `path/to/file.ext:N`").
-3. Send the directives back to the writer subagent (same one that produced the draft) along with the cross-check artifact, asking for a targeted patch — NOT a full rewrite.
-4. Re-run the Gate. If any check still fails after 3 rounds, escalate: mark the leaf `confidence: low`, add an `R####` to RISKS.md describing the persistent quality failure, and finalize anyway (so the wiki is not blocked forever). The persistent failure is itself a project risk worth surfacing.
-
-#### Cost note
-
-Quality Gate is cheap (the rules are mechanical, no semantic LLM judgment for pass/fail). Remediation rounds can be expensive on bad drafts. Empirically, most leaves pass on round 1 if Phase 4.1 followed the template; round 2 fixes are usually anchor placeholders and missing Evidence Log rows. Round 3+ failures indicate either a bad subagent or a genuinely under-specified module — escalation is correct.
+1. Orchestrator runs the Gate (mechanical — no LLM judgment for pass/fail).
+2. For each failing check, emit a specific actionable directive (e.g., "Code Map row 3 has `anchor: {{symbol_or_anchor}}` — replace with the real symbol name found in `path/to/file.ext:N`").
+3. Send directives back to the writer for a **targeted patch**, not a full rewrite.
+4. Re-run the Gate. If any check still fails after 3 rounds, escalate: mark the leaf `confidence: low`, add an `R####` to `RISKS.md` describing the persistent quality failure, and finalize anyway. A persistent quality failure is itself a project risk worth surfacing.
 
 #### What Quality Gate does NOT check
 
-- Whether Summary is "good prose" — that is the writer's craft, not gate-able mechanically.
-- Whether Invariants are "true" — only that they cite evidence. Truth verification is the reviewer's job in 4.2, not the Gate's.
-- Whether Modification Guide gives "good advice" — only that it is filled with concrete entries.
+- Whether Summary is "good prose" — writer's craft, not gate-able mechanically.
+- Whether Invariants are "true" — only that they are *present*. Truth verification is handled by Phase 6.2 reverse coverage + Phase 7 risk aggregation cross-referencing.
+- Whether Modification Guide gives "good advice" — only that it is *filled* with concrete entries.
 
-The Gate's purpose is to refuse hollow docs, not to second-guess judgment. Combined with the cross-check (4.2/4.3) and reverse coverage (6.2), the three together cover: missing structural facts (4.2), structural disagreement (4.3), doc hollowness (4.4), and orphaned source files (6.2).
+The Gate's purpose is to refuse hollow docs, not to second-guess judgment. Combined with reverse coverage (Phase 6.2) and risk aggregation (Phase 7), the three together cover: doc hollowness (4.4), orphaned source files (6.2), and module-level risks that need project-level visibility (7).
 
 ---
 
@@ -592,8 +530,7 @@ The old "subagents must not write to `.architecture/` directly" was overly broad
 
 **Subagents MAY write directly to per-leaf, non-conflicting files:**
 
-- `modules/M####-<slug>.md` — exactly ONE writer subagent per file, by assignment. No two subagents share a leaf.
-- `.architecture/.meta/cross-checks/M####-<slug>.review.json` — exactly ONE reviewer subagent per file, by assignment.
+- `modules/M####-<slug>.md` — exactly ONE writer subagent (or batched-writer) writes each leaf's file. Two subagents never write the same leaf path.
 - `decisions/<YYYY-MM-DD-HHMM>-<slug>.md` — only the subagent that made the decision writes it.
 
 The orchestrator assigns these files at dispatch time; no two subagents are ever told to write the same path. There is no "merge conflict" because there is no shared file.
@@ -626,9 +563,7 @@ Use this table to plan dispatch — not "is parallelism appropriate?" but "which
 | 2b (full tree planning) | parallel by top-level module — N subagents (one per round-2 module), each explores its subtree and proposes child IDs | orchestrator merges proposals into MANIFEST tree |
 | 2.5 (inventories) | parallel — 4 subagents (entrypoints / tests / external-interfaces / generated-and-vendor), each writes its own inventory file | inventories are 4 separate files, no overlap |
 | 3 (leaf-criteria verification) | parallel by top-level module — N subagents | each validates its own subtree's leaf candidates |
-| 4.1 (writer) + 4.2 (reviewer) | **parallel pair per leaf**: writer and reviewer dispatched **simultaneously** for the same leaf | reviewer is told "do NOT read modules/M####.md even if it appears on disk" — temporal racing handled by explicit instruction |
-| 4 across leaves | parallel — multiple `(writer + reviewer)` pairs at once | concurrency budget below |
-| 4.3 (reconcile) | orchestrator-only, sequential per leaf | after both writer and reviewer for a given leaf complete |
+| 4 (batched writer) | parallel — multiple batches of 5–10 cohesive leaves; one writer subagent per batch produces all docs in the batch | concurrency budget below |
 | 4.4 (quality gate) | mechanical check, can run in parallel across leaves but is cheap so sequence is fine | orchestrator |
 | 5 (interactions) | parallel — 4 subagents (runtime / data-flow / build-and-config / external-boundaries), each writes its own map | aggregated edges from MODULE.md docs |
 | 6.1 (forward coverage) | sequential aggregation | orchestrator |
@@ -639,10 +574,10 @@ Use this table to plan dispatch — not "is parallelism appropriate?" but "which
 
 Real-world Agent platforms have parallel-tool-call limits. Use these defaults:
 
-- **N = number of round-2 top-level modules** as the unit of parallel dispatch for tree-shaped phases (2b, 3, writer pass).
-- For Phase 4 (writer + reviewer pairs), launch **up to 8 pairs concurrently** (i.e., 16 simultaneous subagents). If the platform supports fewer, throttle to platform limit. If more, raising the cap is OK but the orchestrator's reconcile (4.3) becomes the next bottleneck.
+- **N = number of round-2 top-level modules** as the unit of parallel dispatch for tree-shaped phases (2b, 3).
+- For Phase 4 batched writers (see "Phase 4 leaf-doc strategy" above): launch **up to 6 batches concurrently** (each batch handles 5–10 cohesive leaves). If the platform supports fewer parallel tool calls, throttle. If more, raising the cap is OK.
 - For Phase 2.5 (inventories) and Phase 5 (interactions), launch all 4 subagents at once — small and bounded.
-- For Phase 6.2 (orphan triage), batch orphans 10 per subagent; cap at 8 concurrent batches.
+- For Phase 6.2 (orphan triage), batch orphans 10 per subagent; cap at 4 concurrent batches.
 
 ### Subagent dispatch payload (what each gets)
 
@@ -651,20 +586,8 @@ Every subagent dispatch includes:
 - The relevant `references/*.md` file(s) for its phase.
 - The relevant `templates/*.md` file(s) for its output.
 - `preflight.json` (so it knows project context).
-- Its **assignment**: subtree path, ID range, file(s) to write, what NOT to read (critically: for reviewer subagents, "do not read modules/M####-<slug>.md").
+- Its **assignment**: subtree path, ID range, file(s) to write.
 - The orchestrator's coordination promises: "you own writes to {these files}; you do not write to {these shared files}; report your findings for shared files in the return."
-
-### Writer / reviewer isolation under parallel dispatch
-
-Phase 4.1 (writer) and 4.2 (reviewer) for the SAME leaf can race. The orchestrator's job:
-
-1. Dispatch both at the same time, both told the same source-of-truth (file paths, ID, planned scope).
-2. **Reviewer** receives explicit instruction: `do NOT read modules/M####-<slug>.md, even if it appears on disk during your run. Produce your claims from source code only.` This is the isolation contract.
-3. Writer writes to `modules/M####-<slug>.md` (with DRAFT sentinel). Reviewer writes to `.meta/cross-checks/M####-<slug>.review.json`.
-4. Orchestrator waits for both. Then runs Phase 4.3 reconcile on that leaf.
-5. Reconcile is per-leaf, so leaves can run independent (writer+reviewer+reconcile) pipelines.
-
-The isolation is enforced by **explicit instruction**, not by timing. If the reviewer obeyed the instruction, the order of writer-completion vs reviewer-start doesn't matter.
 
 For smaller repos (say, < 5k LOC, < 10 leaves), do everything in one session — the parallelism overhead exceeds the savings.
 
